@@ -15,6 +15,9 @@ public class PlayerController : MonoBehaviour
     private int currentPathIndex = 0;
     private bool isMoving = false;
     
+    // Event for when player movement completes
+    public System.Action OnMovementComplete;
+    
     public bool IsMoving => isMoving;
     public int CurrentPathIndex => currentPathIndex;
     
@@ -70,6 +73,9 @@ public class PlayerController : MonoBehaviour
         
         isMoving = false;
         Debug.Log($"Player movement complete! Now at waypoint {currentPathIndex}");
+        
+        // Notify that movement is complete
+        OnMovementComplete?.Invoke();
     }
     
     private IEnumerator JumpToPosition(Vector3 targetPosition)

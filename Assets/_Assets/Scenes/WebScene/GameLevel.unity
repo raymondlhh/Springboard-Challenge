@@ -342,6 +342,15 @@ MonoBehaviour:
   dicePrefab: {fileID: 512676549986405767, guid: 133e4974bd8608147bcc3880ae313a26, type: 3}
   diceCheckInterval: 0.1
   player: {fileID: 1751012035}
+  cardPrefabs:
+  - {fileID: 6239763862220305663, guid: 8936a0f483f6a354caee754f1dfce4fd, type: 3}
+  - {fileID: 6981890756309107154, guid: a54b808bfa1a463478e632c6da117092, type: 3}
+  - {fileID: 8194387192742578118, guid: 54631639d921d97409b3fedf3f6af743, type: 3}
+  - {fileID: 3022107447703446150, guid: f59dd2c14084c214b810cb836fe83ca0, type: 3}
+  - {fileID: 2735673872255608660, guid: 2e0065055f8856f4eb18147cc82caffe, type: 3}
+  - {fileID: 5712029785461676868, guid: 2e8b64791cd779548858461d8a6a0c42, type: 3}
+  cardsStartPath: {fileID: 19521630}
+  cardsEndPath: {fileID: 37908567}
 --- !u!1 &37908566
 GameObject:
   m_ObjectHideFlags: 0

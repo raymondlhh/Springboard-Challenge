@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
@@ -17,12 +18,19 @@ public class GameManager : MonoBehaviour
     [Header("Player Reference")]
     [SerializeField] private PlayerController player;
     
+    [Header("Card System")]
+    [SerializeField] private GameObject[] cardPrefabs = new GameObject[6];
+    [SerializeField] private Transform cardsStartPath;
+    [SerializeField] private Transform cardsEndPath;
+    
     private int diceSum = 0;
     private bool isRolling = false;
     private float lastCheckTime = 0f;
+    private bool isCardAnimating = false;
     
     public int DiceSum => diceSum;
     public bool IsRolling => isRolling;
+    public bool CanRollDice => !isRolling && !isCardAnimating && (player == null || !player.IsMoving);
     
     // Display current dice values
     public int FirstDiceValue => firstDice != null ? firstDice.CurrentValue : 0;
@@ -51,13 +59,26 @@ public class GameManager : MonoBehaviour
         {
             FindPlayer();
         }
+        
+        // Find card spawn points if not assigned
+        if (cardsStartPath == null || cardsEndPath == null)
+        {
+            FindCardSpawnPoints();
+        }
+        
+        // Subscribe to player movement complete event
+        if (player != null)
+        {
+            player.OnMovementComplete += OnPlayerMovementComplete;
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
         // Handle input for web (mouse click) and mobile (touch)
-        if (!isRolling && (Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)))
+        // Only allow rolling if dice are not rolling, player is not moving, and card is not animating
+        if (CanRollDice && (Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)))
         {
             RollDice();
         }
@@ -259,11 +280,105 @@ public class GameManager : MonoBehaviour
             {
                 player = playerObj.AddComponent<PlayerController>();
             }
+            
+            // Subscribe to movement complete event
+            player.OnMovementComplete += OnPlayerMovementComplete;
         }
         else
         {
             Debug.LogWarning("Player GameObject not found in scene!");
         }
+    }
+    
+    private void FindCardSpawnPoints()
+    {
+        GameObject startObj = GameObject.Find("CardsStartPath");
+        GameObject endObj = GameObject.Find("CardsEndPath");
+        
+        if (startObj != null)
+        {
+            cardsStartPath = startObj.transform;
+        }
+        
+        if (endObj != null)
+        {
+            cardsEndPath = endObj.transform;
+        }
+    }
+    
+    private void OnPlayerMovementComplete()
+    {
+        // Spawn random card after player movement completes
+        SpawnRandomCard();
+    }
+    
+    private void SpawnRandomCard()
+    {
+        // Check if we have card prefabs
+        if (cardPrefabs == null || cardPrefabs.Length == 0)
+        {
+            Debug.LogWarning("No card prefabs assigned! Cannot spawn card.");
+            return;
+        }
+        
+        // Filter out null prefabs
+        System.Collections.Generic.List<GameObject> validCards = new System.Collections.Generic.List<GameObject>();
+        foreach (GameObject card in cardPrefabs)
+        {
+            if (card != null)
+            {
+                validCards.Add(card);
+            }
+        }
+        
+        if (validCards.Count == 0)
+        {
+            Debug.LogWarning("No valid card prefabs found! Please assign card prefabs in the Inspector.");
+            return;
+        }
+        
+        // Check if spawn points are available
+        if (cardsStartPath == null || cardsEndPath == null)
+        {
+            Debug.LogWarning("Card spawn points not found! Cannot spawn card.");
+            return;
+        }
+        
+        // Select random card
+        GameObject randomCardPrefab = validCards[Random.Range(0, validCards.Count)];
+        
+        // Spawn the card
+        GameObject spawnedCard = Instantiate(randomCardPrefab);
+        spawnedCard.name = randomCardPrefab.name;
+        
+        // Get or add CardController
+        CardController cardController = spawnedCard.GetComponent<CardController>();
+        if (cardController == null)
+        {
+            cardController = spawnedCard.AddComponent<CardController>();
+        }
+        
+        // Start card animation
+        isCardAnimating = true;
+        cardController.AnimateCard(cardsStartPath, cardsEndPath);
+        
+        // Monitor when card animation completes
+        StartCoroutine(WaitForCardAnimation(cardController));
+        
+        Debug.Log($"Spawned card: {randomCardPrefab.name}");
+    }
+    
+    private IEnumerator WaitForCardAnimation(CardController cardController)
+    {
+        // Wait until card animation is complete
+        while (cardController != null && cardController.IsAnimating)
+        {
+            yield return null;
+        }
+        
+        // Card has been destroyed, allow dice rolling again
+        isCardAnimating = false;
+        Debug.Log("Card animation complete. Dice rolling enabled again.");
     }
     
     /// <summary>
