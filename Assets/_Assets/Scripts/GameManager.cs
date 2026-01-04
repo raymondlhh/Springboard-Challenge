@@ -14,6 +14,9 @@ public class GameManager : MonoBehaviour
     [Header("Dice Settings")]
     [SerializeField] private float diceCheckInterval = 0.1f;
     
+    [Header("Player Reference")]
+    [SerializeField] private PlayerController player;
+    
     private int diceSum = 0;
     private bool isRolling = false;
     private float lastCheckTime = 0f;
@@ -42,6 +45,12 @@ public class GameManager : MonoBehaviour
         
         // Always spawn dice at start (remove any existing dice first)
         SpawnDice();
+        
+        // Find player if not assigned
+        if (player == null)
+        {
+            FindPlayer();
+        }
     }
 
     // Update is called once per frame
@@ -227,6 +236,33 @@ public class GameManager : MonoBehaviour
             
             Debug.Log(message);
             DisplayDiceSum();
+            
+            // Move player based on dice sum
+            if (player != null && diceSum > 0)
+            {
+                player.OnDiceRollComplete(diceSum);
+            }
+            else if (player == null)
+            {
+                Debug.LogWarning("Player not found! Cannot move player.");
+            }
+        }
+    }
+    
+    private void FindPlayer()
+    {
+        GameObject playerObj = GameObject.Find("Player");
+        if (playerObj != null)
+        {
+            player = playerObj.GetComponent<PlayerController>();
+            if (player == null)
+            {
+                player = playerObj.AddComponent<PlayerController>();
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Player GameObject not found in scene!");
         }
     }
     
