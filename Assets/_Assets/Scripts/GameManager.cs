@@ -1,0 +1,235 @@
+using UnityEngine;
+
+public class GameManager : MonoBehaviour
+{
+    [Header("Spawner References")]
+    [SerializeField] private Transform firstSpawner;
+    [SerializeField] private Transform secondSpawner;
+    
+    [Header("Dice References")]
+    [SerializeField] private DiceController firstDice;
+    [SerializeField] private DiceController secondDice;
+    [SerializeField] private GameObject dicePrefab;
+    
+    [Header("Dice Settings")]
+    [SerializeField] private float diceCheckInterval = 0.1f;
+    
+    private int diceSum = 0;
+    private bool isRolling = false;
+    private float lastCheckTime = 0f;
+    
+    public int DiceSum => diceSum;
+    public bool IsRolling => isRolling;
+    
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
+    {
+        // Find spawners if not assigned
+        if (firstSpawner == null || secondSpawner == null)
+        {
+            FindSpawners();
+        }
+        
+        // Load dice prefab if not assigned
+        if (dicePrefab == null)
+        {
+            LoadDicePrefab();
+        }
+        
+        // Always spawn dice at start (remove any existing dice first)
+        SpawnDice();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        // Handle input for web (mouse click) and mobile (touch)
+        if (!isRolling && (Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)))
+        {
+            RollDice();
+        }
+        
+        // Check if dice have finished rolling
+        if (isRolling && Time.time - lastCheckTime >= diceCheckInterval)
+        {
+            lastCheckTime = Time.time;
+            
+            if (!firstDice.IsRolling && !secondDice.IsRolling)
+            {
+                CalculateDiceSum();
+                isRolling = false;
+            }
+        }
+    }
+    
+    private void FindSpawners()
+    {
+        // Try to find spawners by name
+        GameObject firstSpawnerObj = GameObject.Find("FirstSpawner");
+        GameObject secondSpawnerObj = GameObject.Find("SecondSpawner");
+        
+        if (firstSpawnerObj != null)
+        {
+            firstSpawner = firstSpawnerObj.transform;
+        }
+        
+        if (secondSpawnerObj != null)
+        {
+            secondSpawner = secondSpawnerObj.transform;
+        }
+    }
+    
+    private void LoadDicePrefab()
+    {
+        // Try to load dice prefab from Resources folder
+        // Note: The prefab must be in a "Resources" folder for this to work at runtime
+        dicePrefab = Resources.Load<GameObject>("Dice");
+        
+        // If still null, the prefab should be assigned in the Inspector
+        // or placed in a Resources folder
+        if (dicePrefab == null)
+        {
+            Debug.LogWarning("Dice Prefab not found! Please assign it in the Inspector or place it in a Resources folder.");
+        }
+    }
+    
+    private void SpawnDice()
+    {
+        // Remove any existing dice from first spawner
+        if (firstSpawner != null)
+        {
+            // Destroy all children (existing dice)
+            for (int i = firstSpawner.childCount - 1; i >= 0; i--)
+            {
+                Destroy(firstSpawner.GetChild(i).gameObject);
+            }
+            
+            // Spawn new dice at first spawner
+            if (dicePrefab != null)
+            {
+                GameObject spawnedDice = Instantiate(dicePrefab, firstSpawner.position, firstSpawner.rotation, firstSpawner);
+                spawnedDice.name = "FirstDice";
+                firstDice = spawnedDice.GetComponent<DiceController>();
+                
+                if (firstDice == null)
+                {
+                    firstDice = spawnedDice.AddComponent<DiceController>();
+                }
+            }
+            else
+            {
+                Debug.LogError("Dice Prefab is not assigned! Cannot spawn dice.");
+            }
+        }
+        
+        // Remove any existing dice from second spawner
+        if (secondSpawner != null)
+        {
+            // Destroy all children (existing dice)
+            for (int i = secondSpawner.childCount - 1; i >= 0; i--)
+            {
+                Destroy(secondSpawner.GetChild(i).gameObject);
+            }
+            
+            // Spawn new dice at second spawner
+            if (dicePrefab != null)
+            {
+                GameObject spawnedDice = Instantiate(dicePrefab, secondSpawner.position, secondSpawner.rotation, secondSpawner);
+                spawnedDice.name = "SecondDice";
+                secondDice = spawnedDice.GetComponent<DiceController>();
+                
+                if (secondDice == null)
+                {
+                    secondDice = spawnedDice.AddComponent<DiceController>();
+                }
+            }
+            else
+            {
+                Debug.LogError("Dice Prefab is not assigned! Cannot spawn dice.");
+            }
+        }
+    }
+    
+    private void FindDice()
+    {
+        // Try to find dice in spawners first
+        if (firstSpawner != null)
+        {
+            firstDice = firstSpawner.GetComponentInChildren<DiceController>();
+        }
+        
+        if (secondSpawner != null)
+        {
+            secondDice = secondSpawner.GetComponentInChildren<DiceController>();
+        }
+        
+        // Fallback: Try to find dice by name
+        if (firstDice == null)
+        {
+            GameObject firstDiceObj = GameObject.Find("FirstDice");
+            if (firstDiceObj != null)
+            {
+                firstDice = firstDiceObj.GetComponent<DiceController>();
+                if (firstDice == null)
+                {
+                    firstDice = firstDiceObj.AddComponent<DiceController>();
+                }
+            }
+        }
+        
+        if (secondDice == null)
+        {
+            GameObject secondDiceObj = GameObject.Find("SecondDice");
+            if (secondDiceObj != null)
+            {
+                secondDice = secondDiceObj.GetComponent<DiceController>();
+                if (secondDice == null)
+                {
+                    secondDice = secondDiceObj.AddComponent<DiceController>();
+                }
+            }
+        }
+    }
+    
+    public void RollDice()
+    {
+        if (isRolling || firstDice == null || secondDice == null)
+        {
+            return;
+        }
+        
+        isRolling = true;
+        diceSum = 0;
+        
+        // Roll both dice
+        firstDice.RollDice();
+        secondDice.RollDice();
+        
+        lastCheckTime = Time.time;
+    }
+    
+    private void CalculateDiceSum()
+    {
+        if (firstDice != null && secondDice != null)
+        {
+            diceSum = firstDice.CurrentValue + secondDice.CurrentValue;
+            Debug.Log($"Dice Roll Complete! First Dice: {firstDice.CurrentValue}, Second Dice: {secondDice.CurrentValue}, Sum: {diceSum}");
+        }
+    }
+    
+    public void ResetDice()
+    {
+        if (firstDice != null)
+        {
+            firstDice.ResetDice();
+        }
+        
+        if (secondDice != null)
+        {
+            secondDice.ResetDice();
+        }
+        
+        diceSum = 0;
+        isRolling = false;
+    }
+}
