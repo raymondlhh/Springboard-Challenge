@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
-public class StockMarketController1 : MonoBehaviour
+public class StockMarketController : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private Button buyButton;

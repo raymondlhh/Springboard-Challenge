@@ -319,7 +319,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ddbd30a59ab9f734d835500a237fbe77, type: 2}
+  - {fileID: 2100000, guid: 06af56ba1eb038b4281a36d0ffe00bd1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1821,10 +1821,13 @@ MonoBehaviour:
   sellButton: {fileID: 1681444347}
   moneyText: {fileID: 111223156}
   stockValueText: {fileID: 4348714}
+  timeText: {fileID: 677015485}
+  gameOverPanel: {fileID: 1424261696}
   planeTransform: {fileID: 108917747}
   lineHeightOffset: 0.1
   graphWidth: 17
   graphHeight: 4
+  gameTime: 30
   initialMoney: 2000
   baseStockValue: 100
   volatility: 3
