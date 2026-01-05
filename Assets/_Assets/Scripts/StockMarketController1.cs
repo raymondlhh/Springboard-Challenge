@@ -10,12 +10,17 @@ public class StockMarketController1 : MonoBehaviour
     [SerializeField] private Button sellButton;
     [SerializeField] private TextMeshProUGUI moneyText;
     [SerializeField] private TextMeshProUGUI stockValueText;
+    [SerializeField] private TextMeshProUGUI timeText;
+    [SerializeField] private GameObject gameOverPanel;
     
     [Header("3D Plane Reference")]
     [SerializeField] private Transform planeTransform;
     [SerializeField] private float lineHeightOffset = 0.1f; // Height above the plane
     [SerializeField] private float graphWidth = 10f; // Width of the graph on the plane
     [SerializeField] private float graphHeight = 5f; // Height of the graph on the plane
+    
+    [Header("Game Timer Settings")]
+    [SerializeField] private float gameTime = 30f; // 30 seconds
     
     [Header("Stock Settings")]
     [SerializeField] private float initialMoney = 2000f;
@@ -30,6 +35,8 @@ public class StockMarketController1 : MonoBehaviour
     private float currentStockValue;
     private List<float> stockHistory = new List<float>();
     private float lastUpdateTime = 0f;
+    private float remainingTime;
+    private bool isGameOver = false;
     
     // Line Renderer for drawing the stock line
     private LineRenderer stockLineRenderer;
@@ -40,6 +47,8 @@ public class StockMarketController1 : MonoBehaviour
         // Initialize values
         currentMoney = initialMoney;
         currentStockValue = baseStockValue;
+        remainingTime = gameTime;
+        isGameOver = false;
         
         // Find buttons if not assigned
         if (buyButton == null)
@@ -50,6 +59,28 @@ public class StockMarketController1 : MonoBehaviour
         if (sellButton == null)
         {
             sellButton = GameObject.Find("SellButton")?.GetComponent<Button>();
+        }
+        
+        // Find time text if not assigned
+        if (timeText == null)
+        {
+            GameObject timeTextObj = GameObject.Find("TimeText");
+            if (timeTextObj != null)
+            {
+                timeText = timeTextObj.GetComponent<TextMeshProUGUI>();
+            }
+        }
+        
+        // Find game over panel if not assigned
+        if (gameOverPanel == null)
+        {
+            gameOverPanel = GameObject.Find("GameOverPanel");
+        }
+        
+        // Ensure game over panel starts inactive
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(false);
         }
         
         // Find Plane if not assigned
@@ -87,6 +118,21 @@ public class StockMarketController1 : MonoBehaviour
     
     void Update()
     {
+        // Don't update if game is over
+        if (isGameOver)
+            return;
+        
+        // Update timer
+        remainingTime -= Time.deltaTime;
+        
+        // Check if time is up
+        if (remainingTime <= 0f)
+        {
+            remainingTime = 0f;
+            EndGame();
+            return;
+        }
+        
         // Update stock value at intervals
         if (Time.time - lastUpdateTime >= updateInterval)
         {
@@ -224,5 +270,36 @@ public class StockMarketController1 : MonoBehaviour
         {
             stockValueText.text = $"Price: ${currentStockValue:F2}";
         }
+        
+        // Update time display
+        if (timeText != null)
+        {
+            int seconds = Mathf.CeilToInt(remainingTime);
+            timeText.text = $"Time: {seconds}";
+        }
+    }
+    
+    private void EndGame()
+    {
+        isGameOver = true;
+        
+        // Disable buy/sell buttons
+        if (buyButton != null)
+        {
+            buyButton.interactable = false;
+        }
+        
+        if (sellButton != null)
+        {
+            sellButton.interactable = false;
+        }
+        
+        // Activate game over panel
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+        }
+        
+        Debug.Log("Game Over! Final Money: $" + currentMoney.ToString("F2"));
     }
 }
