@@ -2203,6 +2203,37 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 810980180}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &835444303
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 835444304}
+  m_Layer: 0
+  m_Name: TestingManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &835444304
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 835444303}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -40.23069, y: -46.49174, z: -4.3355823}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &967228913
 GameObject:
   m_ObjectHideFlags: 0
@@ -3914,6 +3945,10 @@ PrefabInstance:
       value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 5198333600511406380, guid: 4111604d9670be04ca3f5d40f61b96f3, type: 3}
+      propertyPath: graphHeight
+      value: -3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5198333600511406380, guid: 4111604d9670be04ca3f5d40f61b96f3, type: 3}
       propertyPath: graphParent
       value: 
       objectReference: {fileID: 1715322259}
@@ -5491,3 +5526,4 @@ SceneRoots:
   - {fileID: 187597859}
   - {fileID: 274174832}
   - {fileID: 432382159}
+  - {fileID: 835444304}

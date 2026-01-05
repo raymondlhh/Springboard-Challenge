@@ -36,6 +36,7 @@ public class StockMarketController : MonoBehaviour
     // Line Renderer for drawing the stock line
     private LineRenderer stockLineRenderer;
     private GameObject lineObject;
+    private Color currentLineColor; // Track current line color to prevent flickering
     
     void Start()
     {
@@ -81,6 +82,9 @@ public class StockMarketController : MonoBehaviour
             stockHistory.Add(baseStockValue);
         }
         
+        // Initialize line color
+        currentLineColor = upColor;
+        
         // Setup line renderer
         SetupLineRenderer();
         
@@ -111,11 +115,12 @@ public class StockMarketController : MonoBehaviour
         // Add LineRenderer component
         stockLineRenderer = lineObject.AddComponent<LineRenderer>();
         stockLineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-        stockLineRenderer.startColor = upColor;
-        stockLineRenderer.endColor = upColor;
+        stockLineRenderer.startColor = currentLineColor;
+        stockLineRenderer.endColor = currentLineColor;
         stockLineRenderer.startWidth = lineWidth;
         stockLineRenderer.endWidth = lineWidth;
         stockLineRenderer.useWorldSpace = true; // Use world space for 3D
+        stockLineRenderer.enabled = true; // Ensure it's enabled
     }
     
     private void UpdateStockValue()
@@ -192,7 +197,10 @@ public class StockMarketController : MonoBehaviour
         // Update line renderer
         stockLineRenderer.SetPositions(positions);
         
-        // Create gradient with colors based on each segment's direction
+        // Ensure line renderer is enabled and visible
+        stockLineRenderer.enabled = true;
+        
+        // Create gradient with colors based on current trend (prevents flickering)
         UpdateLineGradient();
     }
     
@@ -201,44 +209,38 @@ public class StockMarketController : MonoBehaviour
         if (stockLineRenderer == null || stockHistory.Count < 2)
             return;
         
-        // Create a gradient for the line
-        Gradient gradient = new Gradient();
-        List<GradientColorKey> colorKeys = new List<GradientColorKey>();
-        List<GradientAlphaKey> alphaKeys = new List<GradientAlphaKey>();
-        
+        // Determine current trend direction (compare last two points)
         int pointCount = stockHistory.Count;
+        bool isCurrentlyGoingUp = stockHistory[pointCount - 1] > stockHistory[pointCount - 2];
         
-        // Add color keys at segment boundaries for better per-segment coloring
-        for (int i = 0; i < pointCount - 1; i++)
+        // Only change color when direction actually changes (prevents flickering)
+        Color newColor = isCurrentlyGoingUp ? upColor : downColor;
+        
+        // Update color only if it's different from current
+        if (newColor != currentLineColor)
         {
-            // Determine direction of this segment (from point i to point i+1)
-            bool goingUp = stockHistory[i + 1] > stockHistory[i];
-            Color segmentColor = goingUp ? upColor : downColor;
-            
-            // Add color key at the start of the segment
-            float startTime = i / (float)(pointCount - 1);
-            colorKeys.Add(new GradientColorKey(segmentColor, startTime));
-            alphaKeys.Add(new GradientAlphaKey(1f, startTime));
-            
-            // Add color key just before the end of the segment (to prevent blending)
-            float endTime = (i + 0.99f) / (float)(pointCount - 1);
-            colorKeys.Add(new GradientColorKey(segmentColor, endTime));
-            alphaKeys.Add(new GradientAlphaKey(1f, endTime));
+            currentLineColor = newColor;
         }
         
-        // Add final point
-        if (pointCount > 1)
-        {
-            float finalTime = 1f;
-            bool finalGoingUp = stockHistory[pointCount - 1] > stockHistory[pointCount - 2];
-            Color finalColor = finalGoingUp ? upColor : downColor;
-            colorKeys.Add(new GradientColorKey(finalColor, finalTime));
-            alphaKeys.Add(new GradientAlphaKey(1f, finalTime));
-        }
+        // Use a simple gradient with the same color throughout (no flickering)
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new GradientColorKey[] { 
+                new GradientColorKey(currentLineColor, 0f), 
+                new GradientColorKey(currentLineColor, 1f) 
+            },
+            new GradientAlphaKey[] { 
+                new GradientAlphaKey(1f, 0f), 
+                new GradientAlphaKey(1f, 1f) 
+            }
+        );
         
-        // Set the gradient
-        gradient.SetKeys(colorKeys.ToArray(), alphaKeys.ToArray());
         stockLineRenderer.colorGradient = gradient;
+        stockLineRenderer.startColor = currentLineColor;
+        stockLineRenderer.endColor = currentLineColor;
+        
+        // Ensure line renderer stays enabled
+        stockLineRenderer.enabled = true;
     }
     
     private void OnBuyClicked()
