@@ -18,6 +18,7 @@ public class StockMarketController : MonoBehaviour
     [SerializeField] private float lineHeightOffset = 0.1f; // Height above the plane
     [SerializeField] private float graphWidth = 10f; // Width of the graph on the plane
     [SerializeField] private float graphHeight = 5f; // Height of the graph on the plane
+    [SerializeField] private float graphPositionChangeInterval = 3f; // How often to change graph position mode
     
     [Header("Game Timer Settings")]
     [SerializeField] private float gameTime = 30f; // 30 seconds
@@ -37,6 +38,19 @@ public class StockMarketController : MonoBehaviour
     private float lastUpdateTime = 0f;
     private float remainingTime;
     private bool isGameOver = false;
+    
+    // Graph positioning
+    private enum GraphPositionMode
+    {
+        Centered,      // Normal centered view
+        Top,          // Graph positioned at top
+        Bottom,       // Graph positioned at bottom
+        FullRange,    // Uses full height range
+        ExtremeUp,   // Goes to most up position
+        ExtremeDown   // Goes to most down position
+    }
+    private GraphPositionMode currentPositionMode = GraphPositionMode.Centered;
+    private float lastPositionChangeTime = 0f;
     
     // Line Renderer for drawing the stock line
     private LineRenderer stockLineRenderer;
@@ -133,6 +147,13 @@ public class StockMarketController : MonoBehaviour
             return;
         }
         
+        // Change graph position mode periodically
+        if (Time.time - lastPositionChangeTime >= graphPositionChangeInterval)
+        {
+            ChangeGraphPositionMode();
+            lastPositionChangeTime = Time.time;
+        }
+        
         // Update stock value at intervals
         if (Time.time - lastUpdateTime >= updateInterval)
         {
@@ -181,6 +202,13 @@ public class StockMarketController : MonoBehaviour
         }
     }
     
+    private void ChangeGraphPositionMode()
+    {
+        // Randomly select a new position mode
+        GraphPositionMode[] modes = (GraphPositionMode[])System.Enum.GetValues(typeof(GraphPositionMode));
+        currentPositionMode = modes[Random.Range(0, modes.Length)];
+    }
+    
     private void DrawStockLine()
     {
         if (stockLineRenderer == null || planeTransform == null || stockHistory.Count < 2)
@@ -199,6 +227,61 @@ public class StockMarketController : MonoBehaviour
             maxValue = currentStockValue + 0.05f;
         }
         
+        // Adjust min/max based on position mode
+        float adjustedMin = minValue;
+        float adjustedMax = maxValue;
+        float adjustedRange = range;
+        
+        switch (currentPositionMode)
+        {
+            case GraphPositionMode.Top:
+                // Position at top - use a smaller range and shift up
+                adjustedRange = range * 0.5f; // Use half the range
+                adjustedMin = maxValue - adjustedRange;
+                adjustedMax = maxValue;
+                break;
+                
+            case GraphPositionMode.Bottom:
+                // Position at bottom - use a smaller range and shift down
+                adjustedRange = range * 0.5f; // Use half the range
+                adjustedMin = minValue;
+                adjustedMax = minValue + adjustedRange;
+                break;
+                
+            case GraphPositionMode.FullRange:
+                // Use full height - expand range to use entire graph height
+                float centerValue = (minValue + maxValue) * 0.5f;
+                adjustedRange = range * 2f; // Expand range
+                adjustedMin = centerValue - adjustedRange * 0.5f;
+                adjustedMax = centerValue + adjustedRange * 0.5f;
+                break;
+                
+            case GraphPositionMode.ExtremeUp:
+                // Go to most up - position near top of graph
+                adjustedRange = range * 0.3f; // Small range
+                adjustedMin = maxValue - adjustedRange;
+                adjustedMax = maxValue;
+                break;
+                
+            case GraphPositionMode.ExtremeDown:
+                // Go to most down - position near bottom of graph
+                adjustedRange = range * 0.3f; // Small range
+                adjustedMin = minValue;
+                adjustedMax = minValue + adjustedRange;
+                break;
+                
+            case GraphPositionMode.Centered:
+            default:
+                // Normal centered view - no adjustment needed
+                break;
+        }
+        
+        // Prevent division by zero after adjustment
+        if (adjustedRange < 0.1f)
+        {
+            adjustedRange = 0.1f;
+        }
+        
         // Set number of points
         int pointCount = stockHistory.Count;
         stockLineRenderer.positionCount = pointCount;
@@ -212,8 +295,11 @@ public class StockMarketController : MonoBehaviour
         
         for (int i = 0; i < pointCount; i++)
         {
-            // Normalize value (0 to 1)
-            float normalizedValue = (stockHistory[i] - minValue) / range;
+            // Normalize value based on adjusted range
+            float normalizedValue = (stockHistory[i] - adjustedMin) / adjustedRange;
+            
+            // Clamp to 0-1 range to prevent going outside graph bounds
+            normalizedValue = Mathf.Clamp01(normalizedValue);
             
             // Convert to local coordinates relative to plane
             // X: spread across graph width (left to right)
