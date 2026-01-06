@@ -21,6 +21,18 @@ public class PlayerController : MonoBehaviour
     public bool IsMoving => isMoving;
     public int CurrentPathIndex => currentPathIndex;
     
+    /// <summary>
+    /// Gets the name of the current waypoint the player is standing on
+    /// </summary>
+    public string GetCurrentWaypointName()
+    {
+        if (currentPathIndex >= 0 && currentPathIndex < pathWaypoints.Count && pathWaypoints[currentPathIndex] != null)
+        {
+            return pathWaypoints[currentPathIndex].name;
+        }
+        return string.Empty;
+    }
+    
     private void Start()
     {
         // Set initial position to first waypoint if available
