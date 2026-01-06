@@ -12,7 +12,7 @@ public class CardController : MonoBehaviour
     
     public bool IsAnimating => isAnimating;
     
-    public void AnimateCard(Transform startTransform, Transform endTransform)
+    public void AnimateCard(Transform startTransform, Transform endTransform, float customMoveDuration = -1f, float customWaitDuration = -1f)
     {
         if (isAnimating)
         {
@@ -20,10 +20,13 @@ public class CardController : MonoBehaviour
             return;
         }
         
-        StartCoroutine(CardAnimationSequence(startTransform, endTransform));
+        // Use custom duration if provided, otherwise use the serialized value
+        float durationToUse = customMoveDuration > 0 ? customMoveDuration : moveDuration;
+        float waitDurationToUse = customWaitDuration > 0 ? customWaitDuration : waitDuration;
+        StartCoroutine(CardAnimationSequence(startTransform, endTransform, durationToUse, waitDurationToUse));
     }
     
-    private IEnumerator CardAnimationSequence(Transform startTransform, Transform endTransform)
+    private IEnumerator CardAnimationSequence(Transform startTransform, Transform endTransform, float moveDurationToUse, float waitDurationToUse)
     {
         isAnimating = true;
         
@@ -39,10 +42,10 @@ public class CardController : MonoBehaviour
         // Step 2: Move to CardsEndPath (keeping 180 degree rotation during movement)
         float elapsedTime = 0f;
         
-        while (elapsedTime < moveDuration)
+        while (elapsedTime < moveDurationToUse)
         {
             elapsedTime += Time.deltaTime;
-            float t = elapsedTime / moveDuration;
+            float t = elapsedTime / moveDurationToUse;
             
             // Smooth curve (ease in-out)
             float curve = t * t * (3f - 2f * t);
@@ -78,8 +81,8 @@ public class CardController : MonoBehaviour
         // Ensure exact final rotation
         transform.rotation = endRot;
         
-        // Step 4: Wait 3 seconds
-        yield return new WaitForSeconds(waitDuration);
+        // Step 4: Wait before destroying
+        yield return new WaitForSeconds(waitDurationToUse);
         
         // Step 5: Destroy the card
         Destroy(gameObject);

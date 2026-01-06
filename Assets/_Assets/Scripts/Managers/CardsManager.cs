@@ -16,6 +16,12 @@ public class CardsManager : MonoBehaviour
     [SerializeField] private Transform cardsStartPath;
     [SerializeField] private Transform cardsEndPath;
     
+    [Header("Card Animation Settings")]
+    [Tooltip("Card movement speed. Higher values = faster movement. (Speed of 1 = 2 seconds duration, Speed of 2 = 1 second duration)")]
+    [SerializeField] private float cardMoveSpeed = 1f;
+    [Tooltip("Time in seconds the card waits before being destroyed after reaching the end position")]
+    [SerializeField] private float cardWaitDuration = 3f;
+    
     [Header("Player Reference")]
     [SerializeField] private PlayerController player;
     
@@ -151,9 +157,12 @@ public class CardsManager : MonoBehaviour
             cardController = spawnedCard.AddComponent<CardController>();
         }
         
-        // Start card animation
+        // Start card animation with the configured speed and wait duration
+        // Convert speed to duration: higher speed = lower duration (faster movement)
+        // Base duration of 2 seconds divided by speed
+        float moveDuration = 2f / Mathf.Max(0.1f, cardMoveSpeed); // Prevent division by zero
         isCardAnimating = true;
-        cardController.AnimateCard(cardsStartPath, cardsEndPath);
+        cardController.AnimateCard(cardsStartPath, cardsEndPath, moveDuration, cardWaitDuration);
         
         // Monitor when card animation completes
         StartCoroutine(WaitForCardAnimation(cardController));

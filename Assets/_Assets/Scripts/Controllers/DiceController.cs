@@ -227,11 +227,11 @@ public class DiceController : MonoBehaviour
             case 3: // Back - rotate 90 degrees around Right axis
                 rotation = Quaternion.Euler(90f, 0f, 0f);
                 break;
-            case 4: // Right - rotate 90 degrees around Forward axis
-                rotation = Quaternion.Euler(0f, 0f, -90f);
-                break;
-            case 5: // Left - rotate -90 degrees around Forward axis
+            case 4: // Right (value 3) - rotate -90 degrees around Forward axis
                 rotation = Quaternion.Euler(0f, 0f, 90f);
+                break;
+            case 5: // Left (value 4) - rotate 90 degrees around Forward axis
+                rotation = Quaternion.Euler(0f, 0f, -90f);
                 break;
         }
         

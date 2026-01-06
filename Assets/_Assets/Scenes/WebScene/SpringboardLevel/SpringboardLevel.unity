@@ -1624,6 +1624,7 @@ MonoBehaviour:
   - {fileID: 6239542079684390897, guid: dd0632bbd1e10d44391b4c8978c214ac, type: 3}
   cardsStartPath: {fileID: 19521630}
   cardsEndPath: {fileID: 37908567}
+  cardMoveSpeed: 2
   player: {fileID: 1751012035}
   debugManager: {fileID: 835444305}
 --- !u!1 &355530602
