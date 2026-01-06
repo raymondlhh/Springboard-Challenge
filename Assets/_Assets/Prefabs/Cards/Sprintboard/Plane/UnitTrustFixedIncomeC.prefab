@@ -14,7 +14,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 7c7c18e7108a2074481d8c9b146c715f, type: 2}
     - target: {fileID: 1150723654706369624, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_Name
-      value: UnitTrustFixedIncome03 Variant
+      value: UnitTrustFixedIncomeC
       objectReference: {fileID: 0}
     - target: {fileID: 3596766121372552361, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -34,19 +34,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7137344771456156864, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.016919225
       objectReference: {fileID: 0}
     - target: {fileID: 7137344771456156864, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 7137344771456156864, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 7137344771456156864, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: 0.99985695
       objectReference: {fileID: 0}
     - target: {fileID: 7137344771456156864, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -58,7 +58,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7137344771456156864, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
+      value: 178.061
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

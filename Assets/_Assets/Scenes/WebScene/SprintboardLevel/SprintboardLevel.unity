@@ -134,7 +134,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &7175371
 Transform:
   m_ObjectHideFlags: 0
@@ -1709,42 +1709,42 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   businessCards:
-  - {fileID: 4364557387411260373, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-  - {fileID: 3549365339854937624, guid: a4b41eb0c5f62a740b4d879c5876230e, type: 3}
-  - {fileID: 5016354325555884783, guid: e771725ce65f1204389dfa4c9f8c1683, type: 3}
-  - {fileID: 4364557387411260373, guid: 3644156c4a7e7c047a9b14132c907da4, type: 3}
-  - {fileID: 3549365339854937624, guid: 98ac3619059fe0e4b9ea033b6becf78f, type: 3}
-  - {fileID: 5016354325555884783, guid: 82324a3c37aa3054bb817ee4f8dd1ec4, type: 3}
+  - {fileID: 382581361638726473, guid: 068b016877173514c9ddfd4a9f8de2fc, type: 3}
+  - {fileID: 4750604740912185158, guid: 27aec7189e6160c4e800ae66ce19889c, type: 3}
+  - {fileID: 5413710849977444306, guid: 28e840b0e14cccc4b87de47f1647a4db, type: 3}
+  - {fileID: 8566206184423780552, guid: 9fb3e19fb5531e840bd162676d04eac8, type: 3}
+  - {fileID: 2537259401791963341, guid: 6d2177d71610b5644b41fb893ffbee91, type: 3}
+  - {fileID: 8956625974894949387, guid: 0ec2f92a7e35c424bbf7428e989ade3b, type: 3}
   chanceCards:
-  - {fileID: 1738681261278392698, guid: da87f0de5d935994dbcde4c11c74e931, type: 3}
-  - {fileID: 6841786800119792779, guid: 17fc190863b513843a653e2ac7117828, type: 3}
-  - {fileID: 2185557735978602066, guid: c8b2ac9862282914c9a8eefb53d38c18, type: 3}
-  - {fileID: 6131662187436600881, guid: d243c85cf732f5e49bd50d2f37aa0b8d, type: 3}
+  - {fileID: 3306660374027818033, guid: eced30736519ae4428124c0a65da4cc3, type: 3}
+  - {fileID: 3826675160268401924, guid: f5b6babad41428943ac43c755ffae857, type: 3}
+  - {fileID: 5613819812675300867, guid: 5e738a5edd5942d4ea65ca4c1b432f90, type: 3}
+  - {fileID: 1693284822594023523, guid: 252ae89e344ba7a45a6c5c86c5068ba7, type: 3}
   marketWatchCards:
-  - {fileID: 2968028681367464952, guid: 20f54c5807a6f2849bbdfd6ec4b3fcf6, type: 3}
-  - {fileID: 7123591909252757307, guid: 5e5e80a92a66f1d48b43bdcda07b0849, type: 3}
-  - {fileID: 5036405986449587842, guid: 22f19398d865ab24d8ff41ccfa9ffb83, type: 3}
+  - {fileID: 6261553454309151597, guid: b5b9e45a6e6301a40bbbc6fcc222ab2f, type: 3}
+  - {fileID: 779828542664178555, guid: fe3fc321afb09d54eaf1d057de26af35, type: 3}
+  - {fileID: 1272405085965538849, guid: 833b88ab87db323499d952f867ba8eca, type: 3}
   realEstateCards:
-  - {fileID: 4991572773560107954, guid: baa362d07b57fb14086d298baabb361a, type: 3}
-  - {fileID: 2418527637634774238, guid: 7894e9bff37c7f743a8fdb3b962c61f1, type: 3}
-  - {fileID: 6746757004000228789, guid: 96a1cf8757b592948bf2c6ec6beebe6b, type: 3}
-  - {fileID: 4991572773560107954, guid: 50cf21e0145ec55448a0d4ddcbf212a8, type: 3}
-  - {fileID: 2418527637634774238, guid: 923e8f74c89eae344a987df072ca4b2d, type: 3}
-  - {fileID: 6746757004000228789, guid: d6c39737c4df92547820e3898afafaa0, type: 3}
-  - {fileID: 4991572773560107954, guid: a7a62d3c18c959d4e9c7b66ed132bf66, type: 3}
-  - {fileID: 2418527637634774238, guid: 73a6b648e87795e478d162623079bc06, type: 3}
-  - {fileID: 6746757004000228789, guid: 0643b6fec5dfe3b4baa18b15fd24ffce, type: 3}
-  - {fileID: 4991572773560107954, guid: c927b9c6522e1c94893365ec7726a6a4, type: 3}
-  - {fileID: 2418527637634774238, guid: d63264351a9fe5146af29bf2799af44e, type: 3}
-  - {fileID: 6746757004000228789, guid: e53318d2d5b531440ab339a6f27ebcd6, type: 3}
+  - {fileID: 7938976621094705061, guid: 87e2335911cf38c48a2981a7062a328c, type: 3}
+  - {fileID: 4078971850190050252, guid: d8083c5016c7eae4090e5ff708f22c0e, type: 3}
+  - {fileID: 297180850931416438, guid: dbccc443165d05b4fbc586eeb32cc9e0, type: 3}
+  - {fileID: 4062932054223491363, guid: 7e518dbd7f0388c49b8e06966bd2d6b9, type: 3}
+  - {fileID: 4150686755849914262, guid: 817b45e329e3e1447af9b8e89faafe2b, type: 3}
+  - {fileID: 5245990811100709718, guid: a0c1680d0aa7a1e49b26a04da5459e36, type: 3}
+  - {fileID: 2420350659976337519, guid: 5ad31f99be476bf4386e90f61408725c, type: 3}
+  - {fileID: 4682937079637095714, guid: d5fbc5c3f85965b40a1745e95ed16004, type: 3}
+  - {fileID: 6434438839357291212, guid: 77ed01c98fd167e42b395947fa82bbef, type: 3}
+  - {fileID: 4720546424443337601, guid: 5e64dba7c8ca17e49937472777d1db76, type: 3}
+  - {fileID: 6116690930620884008, guid: fed2573db312f3249b41e048f595e97a, type: 3}
+  - {fileID: 6020481124773871003, guid: 03e2e4a5203ec1d498de9c64d7362495, type: 3}
   unitTrustEquitiesCards:
-  - {fileID: 8414208613853776096, guid: 7864d4351a15dcb4d9c34064124b7ed1, type: 3}
-  - {fileID: 4167104633637383967, guid: 17afc68506af4314686f24fa1b1d5cfc, type: 3}
-  - {fileID: 6744767414895180438, guid: d1c86b3bed60bf9469f0b5919f669b64, type: 3}
+  - {fileID: 7597035398502305584, guid: 7635c0177976ef94e9cce796ebb3b4ea, type: 3}
+  - {fileID: 2684173997116041020, guid: 7c57a1f613b216c438b7631cc19e31e9, type: 3}
+  - {fileID: 1485882311279450096, guid: a837475c12169b54d9a1c82b8c81e6a9, type: 3}
   unitTrustFixedIncomeCards:
-  - {fileID: 2619428042762497831, guid: 3d5f6f66d41f438448ffcbdeffd65983, type: 3}
-  - {fileID: 7347549162111662932, guid: ec10924abc2a4a844ab79ec895756d1a, type: 3}
-  - {fileID: 5397385383918701547, guid: cb99250e1348f774d846ae55104a1bff, type: 3}
+  - {fileID: 2348464951382862942, guid: a05b275ae1a21c44b8e90dd6ca93f5ed, type: 3}
+  - {fileID: 7130882819114516609, guid: 14fb1404e68701c499ea8124e48cc9eb, type: 3}
+  - {fileID: 6239542079684390897, guid: dd0632bbd1e10d44391b4c8978c214ac, type: 3}
   cardsStartPath: {fileID: 19521630}
   cardsEndPath: {fileID: 37908567}
   player: {fileID: 1751012035}
@@ -2159,7 +2159,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 19521630}
-  - {fileID: 646377328}
   - {fileID: 37908567}
   m_Father: {fileID: 324961889}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -2955,68 +2954,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 608690947}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1001 &646377327
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 508144069}
-    m_Modifications:
-    - target: {fileID: 4364557387411260373, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_Name
-      value: Business01
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
---- !u!4 &646377328 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5793535132413449037, guid: b1b5799ffe6fc6e4b837f01340032871, type: 3}
-  m_PrefabInstance: {fileID: 646377327}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &657847123
 GameObject:
   m_ObjectHideFlags: 0

@@ -14,7 +14,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: e9be31e3d7b45f34ab02c91efe4531e1, type: 2}
     - target: {fileID: 1150723654706369624, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: m_Name
-      value: Business02 Variant
+      value: Business05
       objectReference: {fileID: 0}
     - target: {fileID: 3596766121372552361, guid: 113b0e86a5a57b54ba03b06d68f03476, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
