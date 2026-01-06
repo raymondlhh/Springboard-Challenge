@@ -12,8 +12,17 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Manually assign all path waypoints in order")]
     [SerializeField] private List<Transform> pathWaypoints = new List<Transform>();
     
+    [Header("Fortune Road Waypoints")]
+    [Tooltip("Assign Fortune Road waypoints in order: FortuneRoad01 to FortuneRoad05")]
+    [SerializeField] private List<Transform> fortuneRoadWaypoints = new List<Transform>();
+    [Tooltip("Assign Path39_TreasureChest waypoint (the path after Fortune Road sequence)")]
+    [SerializeField] private Transform path39Waypoint;
+    
     private int currentPathIndex = 0;
     private bool isMoving = false;
+    private bool isInFortuneRoadSequence = false;
+    private int fortuneRoadSequenceIndex = -1;
+    private int savedNormalPathIndex = -1; // Store the normal path index to resume after Fortune Road
     
     // Event for when player movement completes
     public System.Action OnMovementComplete;
@@ -66,25 +75,153 @@ public class PlayerController : MonoBehaviour
         
         for (int step = 0; step < steps; step++)
         {
-            // Move to next waypoint (with looping)
-            currentPathIndex++;
+            Transform targetWaypoint = null;
+            Vector3 targetPosition;
             
-            // Loop back to start if we reach the end
-            if (currentPathIndex >= pathWaypoints.Count)
+            // Handle Fortune Road sequence
+            if (isInFortuneRoadSequence)
             {
-                currentPathIndex = 0;
-                Debug.Log("Player reached the end of the path! Looping back to start.");
+                // Check if we've completed all Fortune Road waypoints
+                if (fortuneRoadSequenceIndex >= fortuneRoadWaypoints.Count)
+                {
+                    // Move to Path39 after Fortune Road sequence
+                    if (path39Waypoint != null)
+                    {
+                        targetWaypoint = path39Waypoint;
+                        targetPosition = path39Waypoint.position;
+                        
+                        // Jump to Path39 (sound plays during jump)
+                        yield return StartCoroutine(JumpToPosition(targetPosition));
+                        
+                        // Exit Fortune Road sequence and resume normal path
+                        isInFortuneRoadSequence = false;
+                        fortuneRoadSequenceIndex = -1;
+                        
+                        // Find Path39 index in normal path to continue from there
+                        currentPathIndex = FindWaypointIndex(path39Waypoint);
+                        if (currentPathIndex == -1)
+                        {
+                            // If Path39 not found, use saved index
+                            currentPathIndex = savedNormalPathIndex;
+                        }
+                        
+                        Debug.Log("Exited Fortune Road sequence! Resuming normal path at Path39.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Path39 waypoint not assigned! Cannot exit Fortune Road sequence.");
+                        // Fallback: exit sequence and use saved index
+                        isInFortuneRoadSequence = false;
+                        fortuneRoadSequenceIndex = -1;
+                        currentPathIndex = savedNormalPathIndex;
+                        continue;
+                    }
+                }
+                else
+                {
+                    // Move to next Fortune Road waypoint
+                    if (fortuneRoadSequenceIndex >= 0 && fortuneRoadSequenceIndex < fortuneRoadWaypoints.Count)
+                    {
+                        targetWaypoint = fortuneRoadWaypoints[fortuneRoadSequenceIndex];
+                        targetPosition = targetWaypoint.position;
+                        
+                        // Jump to Fortune Road waypoint (sound plays during jump)
+                        yield return StartCoroutine(JumpToPosition(targetPosition));
+                        
+                        // Move to next Fortune Road waypoint
+                        fortuneRoadSequenceIndex++;
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Fortune Road sequence index out of bounds!");
+                        isInFortuneRoadSequence = false;
+                        continue;
+                    }
+                }
             }
-            
-            Transform targetWaypoint = pathWaypoints[currentPathIndex];
-            Vector3 targetPosition = targetWaypoint.position;
-            
-            // Jump to the waypoint
-            yield return StartCoroutine(JumpToPosition(targetPosition));
+            else
+            {
+                // Normal path movement
+                currentPathIndex++;
+                
+                // Loop back to start if we reach the end
+                if (currentPathIndex >= pathWaypoints.Count)
+                {
+                    currentPathIndex = 0;
+                    Debug.Log("Player reached the end of the path! Looping back to start.");
+                }
+                
+                targetWaypoint = pathWaypoints[currentPathIndex];
+                targetPosition = targetWaypoint.position;
+                
+                // Jump to the waypoint (sound plays during jump)
+                yield return StartCoroutine(JumpToPosition(targetPosition));
+                
+                // Check if we just landed on a Fortune Road tile - complete entire sequence
+                if (IsCurrentWaypointFortuneRoad())
+                {
+                    // Enter Fortune Road sequence and complete it entirely
+                    isInFortuneRoadSequence = true;
+                    fortuneRoadSequenceIndex = 0;
+                    savedNormalPathIndex = currentPathIndex + 1; // Save the next normal path index
+                    
+                    Debug.Log($"Landed on Fortune Road! Completing entire Fortune Road sequence (5 waypoints + Path39).");
+                    
+                    // Complete all Fortune Road waypoints
+                    for (int frStep = 0; frStep < fortuneRoadWaypoints.Count; frStep++)
+                    {
+                        if (frStep < fortuneRoadWaypoints.Count && fortuneRoadWaypoints[frStep] != null)
+                        {
+                            targetWaypoint = fortuneRoadWaypoints[frStep];
+                            targetPosition = targetWaypoint.position;
+                            
+                            // Jump to Fortune Road waypoint (sound plays during jump)
+                            yield return StartCoroutine(JumpToPosition(targetPosition));
+                        }
+                    }
+                    
+                    // Move to Path39 after Fortune Road sequence
+                    if (path39Waypoint != null)
+                    {
+                        targetWaypoint = path39Waypoint;
+                        targetPosition = path39Waypoint.position;
+                        
+                        // Jump to Path39 (sound plays during jump)
+                        yield return StartCoroutine(JumpToPosition(targetPosition));
+                        
+                        // Exit Fortune Road sequence and resume normal path
+                        isInFortuneRoadSequence = false;
+                        fortuneRoadSequenceIndex = -1;
+                        
+                        // Find Path39 index in normal path to continue from there
+                        currentPathIndex = FindWaypointIndex(path39Waypoint);
+                        if (currentPathIndex == -1)
+                        {
+                            // If Path39 not found, use saved index
+                            currentPathIndex = savedNormalPathIndex;
+                        }
+                        
+                        Debug.Log("Completed Fortune Road sequence! Resuming normal path at Path39.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Path39 waypoint not assigned! Cannot exit Fortune Road sequence.");
+                        // Fallback: exit sequence and use saved index
+                        isInFortuneRoadSequence = false;
+                        fortuneRoadSequenceIndex = -1;
+                        currentPathIndex = savedNormalPathIndex;
+                    }
+                }
+            }
         }
         
         isMoving = false;
-        Debug.Log($"Player movement complete! Now at waypoint {currentPathIndex}");
+        string currentWaypointName = isInFortuneRoadSequence 
+            ? (fortuneRoadSequenceIndex >= 0 && fortuneRoadSequenceIndex < fortuneRoadWaypoints.Count
+                ? fortuneRoadWaypoints[fortuneRoadSequenceIndex].name 
+                : "Fortune Road Sequence (completed)") 
+            : (currentPathIndex < pathWaypoints.Count ? pathWaypoints[currentPathIndex].name : "Unknown");
+        Debug.Log($"Player movement complete! Now at waypoint: {currentWaypointName}");
         
         // Notify that movement is complete
         OnMovementComplete?.Invoke();
@@ -94,6 +231,7 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 startPos = transform.position;
         float elapsedTime = 0f;
+        bool hasPlayedSound = false;
         
         while (elapsedTime < jumpDuration)
         {
@@ -102,6 +240,16 @@ public class PlayerController : MonoBehaviour
             
             // Smooth curve for jump (ease in-out)
             float curve = t * t * (3f - 2f * t);
+            
+            // Play TileHit sound early in the jump animation for immediate feedback
+            if (!hasPlayedSound && t > 0.2f)
+            {
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlaySFX("TileHit");
+                }
+                hasPlayedSound = true;
+            }
             
             // Calculate position with arc
             Vector3 currentPos = Vector3.Lerp(startPos, targetPosition, curve);
@@ -123,6 +271,41 @@ public class PlayerController : MonoBehaviour
             transform.position = pathWaypoints[0].position;
             currentPathIndex = 0;
         }
+        
+        // Reset Fortune Road sequence state
+        isInFortuneRoadSequence = false;
+        fortuneRoadSequenceIndex = -1;
+        savedNormalPathIndex = -1;
+    }
+    
+    /// <summary>
+    /// Checks if the current waypoint is a Fortune Road tile
+    /// </summary>
+    private bool IsCurrentWaypointFortuneRoad()
+    {
+        if (currentPathIndex >= 0 && currentPathIndex < pathWaypoints.Count && pathWaypoints[currentPathIndex] != null)
+        {
+            string waypointName = pathWaypoints[currentPathIndex].name;
+            return waypointName.Contains("FortuneRoad", System.StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Finds the index of a waypoint in the normal path waypoints list
+    /// </summary>
+    private int FindWaypointIndex(Transform waypoint)
+    {
+        if (waypoint == null) return -1;
+        
+        for (int i = 0; i < pathWaypoints.Count; i++)
+        {
+            if (pathWaypoints[i] == waypoint)
+            {
+                return i;
+            }
+        }
+        return -1;
     }
     
     // Called from GameManager when dice sum is calculated
