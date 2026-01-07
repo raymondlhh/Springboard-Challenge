@@ -11,6 +11,7 @@ public class CardsManager : MonoBehaviour
     [SerializeField] private GameObject[] realEstateCards = new GameObject[3];
     [SerializeField] private GameObject[] unitTrustEquitiesCards = new GameObject[3];
     [SerializeField] private GameObject[] unitTrustFixedIncomeCards = new GameObject[3];
+    [SerializeField] private GameObject[] fortuneRoadCards = new GameObject[5];
     
     [Header("Card Spawn Points")]
     [SerializeField] private Transform cardsStartPath;
@@ -216,6 +217,44 @@ public class CardsManager : MonoBehaviour
             return (exactMatch, false); // Exact match, not random
         }
         
+        // Check for FortuneRoad paths first (exact name matching)
+        // FortuneRoad paths are like "FortuneRoad01_PropertyCashflow", "FortuneRoad02_BusinessIncome", etc.
+        if (normalizedPath.StartsWith("FortuneRoad", System.StringComparison.OrdinalIgnoreCase))
+        {
+            // Try to find exact match in fortuneRoadCards array first
+            GameObject fortuneRoadCard = FindExactCardMatchInArray(fortuneRoadCards, normalizedPath);
+            if (fortuneRoadCard != null)
+            {
+                return (fortuneRoadCard, false); // Exact match, not random
+            }
+            
+            // If exact match not found, try to match by number (FortuneRoad01 -> FortuneRoad001, etc.)
+            // Extract number from path (e.g., "FortuneRoad01_PropertyCashflow" -> 1)
+            var match = System.Text.RegularExpressions.Regex.Match(normalizedPath, @"FortuneRoad(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int waypointNumber))
+            {
+                // Try to find card with matching number (handle "01" vs "001" formats)
+                // Look for cards named like "FortuneRoad001", "FortuneRoad01", etc.
+                foreach (GameObject card in fortuneRoadCards)
+                {
+                    if (card != null)
+                    {
+                        string cardName = card.name;
+                        // Extract number from card name
+                        var cardMatch = System.Text.RegularExpressions.Regex.Match(cardName, @"FortuneRoad(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        if (cardMatch.Success && int.TryParse(cardMatch.Groups[1].Value, out int cardNumber))
+                        {
+                            // Match if numbers are the same (e.g., 1 matches 1, regardless of "01" vs "001" format)
+                            if (cardNumber == waypointNumber)
+                            {
+                                return (card, false);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         // Check for category match (e.g., "Business", "Chance", "FixedIncome", etc.)
         // Handle different naming conventions
         GameObject randomCard = null;
@@ -303,7 +342,8 @@ public class CardsManager : MonoBehaviour
             marketWatchCards, 
             realEstateCards, 
             unitTrustEquitiesCards, 
-            unitTrustFixedIncomeCards 
+            unitTrustFixedIncomeCards,
+            fortuneRoadCards
         };
         
         foreach (GameObject[] cardArray in allCardArrays)
@@ -314,6 +354,27 @@ public class CardsManager : MonoBehaviour
                 {
                     return card;
                 }
+            }
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Finds an exact card match in a specific array
+    /// </summary>
+    private GameObject FindExactCardMatchInArray(GameObject[] cardArray, string pathName)
+    {
+        if (cardArray == null || cardArray.Length == 0)
+        {
+            return null;
+        }
+        
+        foreach (GameObject card in cardArray)
+        {
+            if (card != null && card.name.Equals(pathName, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return card;
             }
         }
         

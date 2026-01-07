@@ -262,7 +262,7 @@ Transform:
   m_GameObject: {fileID: 37908566}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.03, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1658,6 +1658,12 @@ MonoBehaviour:
   - {fileID: 2348464951382862942, guid: a05b275ae1a21c44b8e90dd6ca93f5ed, type: 3}
   - {fileID: 7130882819114516609, guid: 14fb1404e68701c499ea8124e48cc9eb, type: 3}
   - {fileID: 6239542079684390897, guid: dd0632bbd1e10d44391b4c8978c214ac, type: 3}
+  fortuneRoadCards:
+  - {fileID: 7078911647266790113, guid: 0369fd705e29887428233440439a32a5, type: 3}
+  - {fileID: 7890332948621196173, guid: 8e52e9df5e681fa418364e088b071f24, type: 3}
+  - {fileID: 2230860844638815799, guid: ff06a12315490704d8e95fa972267f29, type: 3}
+  - {fileID: 4064141503966124030, guid: 05789d37feae34a469d8ed4b8a2c8e02, type: 3}
+  - {fileID: 4308141281054432705, guid: 5e1cd934b9dc72b4fb24a6e3b1782302, type: 3}
   cardsStartPath: {fileID: 19521630}
   cardsEndPath: {fileID: 37908567}
   cardMoveSpeed: 2
@@ -4007,7 +4013,7 @@ GameObject:
   - component: {fileID: 1101809138}
   - component: {fileID: 1101809137}
   m_Layer: 0
-  m_Name: FortuneRoad03_Win10000Cash
+  m_Name: Path47_Win10000Cash
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4439,7 +4445,7 @@ GameObject:
   - component: {fileID: 1179476543}
   - component: {fileID: 1179476542}
   m_Layer: 0
-  m_Name: FortuneRoad02_BusinessIncome
+  m_Name: Path46_BusinessIncome
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4968,7 +4974,7 @@ GameObject:
   - component: {fileID: 1375206264}
   - component: {fileID: 1375206263}
   m_Layer: 0
-  m_Name: FortuneRoad01_PropertyCashflow
+  m_Name: Path45_PropertyCashflow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7079,7 +7085,7 @@ GameObject:
   - component: {fileID: 1900858415}
   - component: {fileID: 1900858414}
   m_Layer: 0
-  m_Name: FortuneRoad05_Win2000Cash
+  m_Name: Path49_Win2000Cash
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7295,7 +7301,7 @@ GameObject:
   - component: {fileID: 1990227789}
   - component: {fileID: 1990227788}
   m_Layer: 0
-  m_Name: FortuneRoad04_BusinessProperty
+  m_Name: Path48_BusinessProperty
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

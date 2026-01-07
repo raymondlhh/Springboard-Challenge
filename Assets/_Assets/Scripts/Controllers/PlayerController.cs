@@ -46,6 +46,17 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public string GetCurrentWaypointName()
     {
+        // If in Fortune Road sequence, return Fortune Road waypoint name
+        if (isInFortuneRoadSequence)
+        {
+            if (fortuneRoadSequenceIndex >= 0 && fortuneRoadSequenceIndex < fortuneRoadWaypoints.Count && fortuneRoadWaypoints[fortuneRoadSequenceIndex] != null)
+            {
+                return fortuneRoadWaypoints[fortuneRoadSequenceIndex].name;
+            }
+            return string.Empty;
+        }
+        
+        // Otherwise, return normal path waypoint name
         if (currentPathIndex >= 0 && currentPathIndex < pathWaypoints.Count && pathWaypoints[currentPathIndex] != null)
         {
             return pathWaypoints[currentPathIndex].name;
