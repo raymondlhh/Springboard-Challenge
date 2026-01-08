@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: ChromaKey 1
-  m_Shader: {fileID: -6465566751694194690, guid: cd71bebe103fba44da5144eee08465f4, type: 3}
+  m_Name: ChromaKeyUnlit00
+  m_Shader: {fileID: -6465566751694194690, guid: 4970d77fb15815c409bcacebf5b1807a, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -33,7 +33,6 @@ Material:
   stringTagMap: {}
   disabledShaderPasses:
   - MOTIONVECTORS
-  - DepthOnly
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3

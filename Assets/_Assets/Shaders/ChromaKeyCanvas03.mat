@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: ChromaKey 3
-  m_Shader: {fileID: -6465566751694194690, guid: 736e72250f74fbd40a62f6c071ae8699, type: 3}
+  m_Name: ChromaKeyCanvas03
+  m_Shader: {fileID: -6465566751694194690, guid: cd71bebe103fba44da5144eee08465f4, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -72,7 +72,7 @@ Material:
     - _Cull: 2
     - _DstBlend: 10
     - _Fuzziness: 0
-    - _HueRange: 0.4
+    - _HueRange: 0.7
     - _QueueControl: 0
     - _QueueOffset: 0
     - _SrcBlend: 5
@@ -88,7 +88,7 @@ Material:
     - _ZWrite: 0
     - _ZWriteControl: 0
     m_Colors:
-    - _ChromaKeyColor: {r: 0.015686275, g: 0.98823535, b: 0.10588236, a: 1}
+    - _ChromaKeyColor: {r: 0.003921569, g: 0.5686275, b: 0.24313727, a: 1}
     - _ClipRect: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
