@@ -9,16 +9,24 @@ public class CardController : MonoBehaviour
     [SerializeField] private float waitDuration = 3f;
     
     private bool isAnimating = false;
+    private bool shouldWaitForInput = false; // Flag to delay destruction for RealEstate cards
+    private bool hasReachedEnd = false; // Flag to indicate card has reached end path
     
     public bool IsAnimating => isAnimating;
+    public bool HasReachedEnd => hasReachedEnd;
     
-    public void AnimateCard(Transform startTransform, Transform endTransform, float customMoveDuration = -1f, float customWaitDuration = -1f)
+    // Event fired when card reaches end path (for RealEstate cards)
+    public System.Action<CardController> OnCardReachedEnd;
+    
+    public void AnimateCard(Transform startTransform, Transform endTransform, float customMoveDuration = -1f, float customWaitDuration = -1f, bool waitForInput = false)
     {
         if (isAnimating)
         {
             Debug.LogWarning("Card is already animating!");
             return;
         }
+        
+        shouldWaitForInput = waitForInput;
         
         // Use custom duration if provided, otherwise use the serialized value
         float durationToUse = customMoveDuration > 0 ? customMoveDuration : moveDuration;
@@ -29,6 +37,7 @@ public class CardController : MonoBehaviour
     private IEnumerator CardAnimationSequence(Transform startTransform, Transform endTransform, float moveDurationToUse, float waitDurationToUse)
     {
         isAnimating = true;
+        hasReachedEnd = false;
         
         // Step 1: Spawn at CardsStartPath with 180 degree rotation
         transform.position = startTransform.position;
@@ -81,13 +90,43 @@ public class CardController : MonoBehaviour
         // Ensure exact final rotation
         transform.rotation = endRot;
         
-        // Step 4: Wait before destroying
-        yield return new WaitForSeconds(waitDurationToUse);
+        // Mark that card has reached end
+        hasReachedEnd = true;
         
-        // Step 5: Destroy the card
-        Destroy(gameObject);
+        // If this is a RealEstate card, notify and wait for input
+        if (shouldWaitForInput)
+        {
+            // Notify CardsManager that card has reached end
+            OnCardReachedEnd?.Invoke(this);
+            
+            // Wait indefinitely until manually destroyed
+            while (shouldWaitForInput && gameObject != null)
+            {
+                yield return null;
+            }
+        }
+        else
+        {
+            // Step 4: Wait before destroying (normal behavior)
+            yield return new WaitForSeconds(waitDurationToUse);
+            
+            // Step 5: Destroy the card
+            Destroy(gameObject);
+        }
         
         isAnimating = false;
+    }
+    
+    /// <summary>
+    /// Manually destroys the card (called when user makes a decision)
+    /// </summary>
+    public void DestroyCard()
+    {
+        shouldWaitForInput = false;
+        if (gameObject != null)
+        {
+            Destroy(gameObject);
+        }
     }
 }
 

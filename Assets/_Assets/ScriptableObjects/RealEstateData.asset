@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fcbe026159b38340a5c3e661708b3f8, type: 3}
+  m_Name: RealEstateData
+  m_EditorClassIdentifier: 
+  properties:
+  - propertyName: RealEstate01
+    displayName: RealEstate01
+    value: 50000
+    downpayment: 3000
+    income: 200
+    incomePerVisit: 50
+  - propertyName: RealEstate02
+    displayName: RealEstate02
+    value: 55000
+    downpayment: 3500
+    income: 210
+    incomePerVisit: 50
+  - propertyName: RealEstate03
+    displayName: RealEstate03
+    value: 60000
+    downpayment: 4000
+    income: 220
+    incomePerVisit: 50
+  - propertyName: RealEstate04
+    displayName: RealEstate04
+    value: 65000
+    downpayment: 4500
+    income: 230
+    incomePerVisit: 70
+  - propertyName: RealEstate05
+    displayName: RealEstate05
+    value: 70000
+    downpayment: 5000
+    income: 240
+    incomePerVisit: 50
+  - propertyName: RealEstate06
+    displayName: RealEstate06
+    value: 75000
+    downpayment: 5500
+    income: 250
+    incomePerVisit: 70
+  - propertyName: RealEstate07
+    displayName: RealEstate07
+    value: 80000
+    downpayment: 6000
+    income: 270
+    incomePerVisit: 100
+  - propertyName: RealEstate08
+    displayName: RealEstate08
+    value: 85000
+    downpayment: 6500
+    income: 280
+    incomePerVisit: 100
+  - propertyName: RealEstate09
+    displayName: RealEstate09
+    value: 90000
+    downpayment: 7000
+    income: 290
+    incomePerVisit: 100
+  - propertyName: RealEstate10
+    displayName: RealEstate10
+    value: 400000
+    downpayment: 6000
+    income: 500
+    incomePerVisit: 150
+  - propertyName: RealEstate11
+    displayName: RealEstate11
+    value: 500000
+    downpayment: 10000
+    income: 1000
+    incomePerVisit: 150
+  - propertyName: RealEstate12
+    displayName: RealEstate12
+    value: 600000
+    downpayment: 12000
+    income: 1200
+    incomePerVisit: 150

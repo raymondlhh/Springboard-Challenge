@@ -29,7 +29,13 @@ public class CardsManager : MonoBehaviour
     [Header("Debug Manager Reference")]
     [SerializeField] private StockManager debugManager;
     
+    [Header("Real Estate Settings")]
+    [SerializeField] private RealEstateData realEstateData;
+    [SerializeField] private ForSaleUIController forSaleUIController;
+    
     private bool isCardAnimating = false;
+    private CardController currentRealEstateCard;
+    private string currentRealEstatePathName;
     
     public bool IsCardAnimating => isCardAnimating;
     
@@ -65,6 +71,28 @@ public class CardsManager : MonoBehaviour
         if (debugManager == null)
         {
             debugManager = FindAnyObjectByType<StockManager>();
+        }
+        
+        // Find ForSaleUIController if not assigned
+        if (forSaleUIController == null)
+        {
+            GameObject forSaleUIObj = GameObject.Find("ForSaleUI");
+            if (forSaleUIObj != null)
+            {
+                forSaleUIController = forSaleUIObj.GetComponent<ForSaleUIController>();
+            }
+            
+            if (forSaleUIController == null)
+            {
+                forSaleUIController = FindAnyObjectByType<ForSaleUIController>();
+            }
+        }
+        
+        // Subscribe to ForSaleUI events
+        if (forSaleUIController != null)
+        {
+            forSaleUIController.OnPurchaseComplete += OnRealEstatePurchaseComplete;
+            forSaleUIController.OnPurchaseCancelled += OnRealEstatePurchaseCancelled;
         }
         
         // Subscribe to player movement complete event
@@ -172,15 +200,30 @@ public class CardsManager : MonoBehaviour
             cardController = spawnedCard.AddComponent<CardController>();
         }
         
+        // Check if this is a RealEstate path
+        bool isRealEstatePath = IsRealEstatePath(pathName);
+        bool waitForInput = isRealEstatePath;
+        
+        // If it's a RealEstate path, subscribe to card reached end event
+        if (isRealEstatePath)
+        {
+            currentRealEstateCard = cardController;
+            currentRealEstatePathName = pathName;
+            cardController.OnCardReachedEnd += OnRealEstateCardReachedEnd;
+        }
+        
         // Start card animation with the configured speed and wait duration
         // Convert speed to duration: higher speed = lower duration (faster movement)
         // Base duration of 2 seconds divided by speed
         float moveDuration = 2f / Mathf.Max(0.1f, cardMoveSpeed); // Prevent division by zero
         isCardAnimating = true;
-        cardController.AnimateCard(cardsStartPath, cardsEndPath, moveDuration, cardWaitDuration);
+        cardController.AnimateCard(cardsStartPath, cardsEndPath, moveDuration, cardWaitDuration, waitForInput);
         
-        // Monitor when card animation completes
-        StartCoroutine(WaitForCardAnimation(cardController));
+        // Monitor when card animation completes (only for non-RealEstate cards)
+        if (!isRealEstatePath)
+        {
+            StartCoroutine(WaitForCardAnimation(cardController));
+        }
         
         // Log with indication of random selection
         if (isRandomSelection)
@@ -425,12 +468,160 @@ public class CardsManager : MonoBehaviour
         Debug.Log("Card animation complete. Dice rolling enabled again.");
     }
     
+    /// <summary>
+    /// Checks if the path name is a RealEstate path
+    /// </summary>
+    private bool IsRealEstatePath(string pathName)
+    {
+        if (string.IsNullOrEmpty(pathName))
+        {
+            return false;
+        }
+        
+        string categoryName = ExtractCategoryFromPath(pathName);
+        return categoryName.StartsWith("RealEstate", System.StringComparison.OrdinalIgnoreCase);
+    }
+    
+    /// <summary>
+    /// Called when a RealEstate card reaches the end path
+    /// </summary>
+    private void OnRealEstateCardReachedEnd(CardController cardController)
+    {
+        if (string.IsNullOrEmpty(currentRealEstatePathName))
+        {
+            Debug.LogError("RealEstate path name is empty!");
+            return;
+        }
+        
+        // Extract property name from path (e.g., "Path11_RealEstate03" -> "RealEstate03")
+        string categoryName = ExtractCategoryFromPath(currentRealEstatePathName);
+        
+        // Get property data
+        if (realEstateData == null)
+        {
+            Debug.LogError("RealEstateData is not assigned! Cannot show ForSaleUI.");
+            return;
+        }
+        
+        RealEstateData.RealEstateProperty property = realEstateData.GetPropertyByName(categoryName);
+        if (property == null)
+        {
+            Debug.LogWarning($"Property data not found for: {categoryName}");
+            return;
+        }
+        
+        // Find the path transform to spawn PlayerItem
+        Transform pathTransform = FindPathTransform(currentRealEstatePathName);
+        if (pathTransform == null)
+        {
+            Debug.LogWarning($"Path transform not found for: {currentRealEstatePathName}");
+        }
+        
+        // Show ForSaleUI
+        if (forSaleUIController != null)
+        {
+            forSaleUIController.ShowForSaleUI(property, cardController, pathTransform, categoryName);
+        }
+        else
+        {
+            Debug.LogError("ForSaleUIController is not assigned! Cannot show ForSaleUI.");
+        }
+    }
+    
+    /// <summary>
+    /// Finds the transform of a path by name
+    /// </summary>
+    private Transform FindPathTransform(string pathName)
+    {
+        GameObject pathObj = GameObject.Find(pathName);
+        if (pathObj != null)
+        {
+            return pathObj.transform;
+        }
+        
+        // Try to find in GameMap
+        GameObject gameMap = GameObject.Find("GameMap");
+        if (gameMap != null)
+        {
+            Transform pathTransform = gameMap.transform.Find(pathName);
+            if (pathTransform != null)
+            {
+                return pathTransform;
+            }
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Called when player completes a RealEstate purchase
+    /// </summary>
+    private void OnRealEstatePurchaseComplete()
+    {
+        // Destroy the card
+        if (currentRealEstateCard != null)
+        {
+            currentRealEstateCard.DestroyCard();
+            currentRealEstateCard = null;
+        }
+        
+        // Card has been destroyed, allow dice rolling again
+        isCardAnimating = false;
+        
+        // Spawn dice
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null)
+        {
+            gameManager.SpawnDice();
+        }
+        
+        Debug.Log("RealEstate purchase complete. Card destroyed and dice spawned.");
+    }
+    
+    /// <summary>
+    /// Called when player cancels a RealEstate purchase
+    /// </summary>
+    private void OnRealEstatePurchaseCancelled()
+    {
+        // Destroy the card
+        if (currentRealEstateCard != null)
+        {
+            currentRealEstateCard.DestroyCard();
+            currentRealEstateCard = null;
+        }
+        
+        // Card has been destroyed, allow dice rolling again
+        isCardAnimating = false;
+        
+        // Spawn dice
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null)
+        {
+            gameManager.SpawnDice();
+        }
+        
+        Debug.Log("RealEstate purchase cancelled. Card destroyed and dice spawned.");
+    }
+    
     private void OnDestroy()
     {
         // Unsubscribe from player movement complete event
         if (player != null)
         {
             player.OnMovementComplete -= OnPlayerMovementComplete;
+        }
+        
+        // Unsubscribe from ForSaleUI events
+        if (forSaleUIController != null)
+        {
+            forSaleUIController.OnPurchaseComplete -= OnRealEstatePurchaseComplete;
+            forSaleUIController.OnPurchaseCancelled -= OnRealEstatePurchaseCancelled;
+        }
+        
+        // Unsubscribe from card events
+        if (currentRealEstateCard != null)
+        {
+            currentRealEstateCard.OnCardReachedEnd -= OnRealEstateCardReachedEnd;
         }
     }
 }

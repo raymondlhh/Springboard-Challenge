@@ -23,12 +23,11 @@ public class PlayerFinance : MonoBehaviour
     [Header("Expense Items")]
     [SerializeField] private List<FinancialItem> expenseItems = new List<FinancialItem>();
     
-    [Header("Purchased Items")]
-    [SerializeField] private List<string> realEstateItems = new List<string>();
-    [SerializeField] private List<string> businessItems = new List<string>();
-    [SerializeField] private List<string> stockItems = new List<string>();
-    [SerializeField] private List<string> unitTrustItems = new List<string>();
-    [SerializeField] private List<string> insuranceItems = new List<string>();
+    [Header("Cash Settings")]
+    [Tooltip("Initial cash amount when game starts")]
+    [SerializeField] private float initialCash = 0f;
+    
+    private float currentCash = 0f;
     
     // Public properties - Auto-calculated from items
     public float TotalIncome 
@@ -43,30 +42,25 @@ public class PlayerFinance : MonoBehaviour
     
     public float CurrentPayday => TotalIncome - TotalExpenses;
     
-    // Event that fires when income or expenses change
+    public float CurrentCash => currentCash;
+    
+    // Events that fire when income, expenses, or cash change
     public System.Action<float> OnPaydayChanged;
+    public System.Action<float> OnCashChanged;
     
     // Read-only access to income and expense lists
     public IReadOnlyList<FinancialItem> IncomeItems => incomeItems;
     public IReadOnlyList<FinancialItem> ExpenseItems => expenseItems;
-    
-    // Read-only access to item lists
-    public IReadOnlyList<string> RealEstateItems => realEstateItems;
-    public IReadOnlyList<string> BusinessItems => businessItems;
-    public IReadOnlyList<string> StockItems => stockItems;
-    public IReadOnlyList<string> UnitTrustItems => unitTrustItems;
-    public IReadOnlyList<string> InsuranceItems => insuranceItems;
     
     void Start()
     {
         // Initialize with default values if needed
         if (incomeItems == null) incomeItems = new List<FinancialItem>();
         if (expenseItems == null) expenseItems = new List<FinancialItem>();
-        if (realEstateItems == null) realEstateItems = new List<string>();
-        if (businessItems == null) businessItems = new List<string>();
-        if (stockItems == null) stockItems = new List<string>();
-        if (unitTrustItems == null) unitTrustItems = new List<string>();
-        if (insuranceItems == null) insuranceItems = new List<string>();
+        
+        // Initialize cash with initial value
+        currentCash = initialCash;
+        OnCashChanged?.Invoke(currentCash);
     }
     
     /// <summary>
@@ -179,128 +173,52 @@ public class PlayerFinance : MonoBehaviour
     }
     
     /// <summary>
-    /// Adds a Real Estate item to the player's inventory
+    /// Adds cash to the player's current cash
     /// </summary>
-    public void AddRealEstate(string itemName)
+    public void AddCash(float amount)
     {
-        if (!string.IsNullOrEmpty(itemName) && !realEstateItems.Contains(itemName))
+        if (amount > 0)
         {
-            realEstateItems.Add(itemName);
-            Debug.Log($"Real Estate added: {itemName}");
+            currentCash += amount;
+            Debug.Log($"Cash added: {amount}. Current Cash: {currentCash}");
+            OnCashChanged?.Invoke(currentCash);
         }
     }
     
     /// <summary>
-    /// Adds a Business item to the player's inventory
+    /// Subtracts cash from the player's current cash
     /// </summary>
-    public void AddBusiness(string itemName)
+    public bool SubtractCash(float amount)
     {
-        if (!string.IsNullOrEmpty(itemName) && !businessItems.Contains(itemName))
+        if (amount > 0)
         {
-            businessItems.Add(itemName);
-            Debug.Log($"Business added: {itemName}");
-        }
-    }
-    
-    /// <summary>
-    /// Adds a Stock item to the player's inventory
-    /// </summary>
-    public void AddStock(string itemName)
-    {
-        if (!string.IsNullOrEmpty(itemName) && !stockItems.Contains(itemName))
-        {
-            stockItems.Add(itemName);
-            Debug.Log($"Stock added: {itemName}");
-        }
-    }
-    
-    /// <summary>
-    /// Adds a Unit Trust item to the player's inventory
-    /// </summary>
-    public void AddUnitTrust(string itemName)
-    {
-        if (!string.IsNullOrEmpty(itemName) && !unitTrustItems.Contains(itemName))
-        {
-            unitTrustItems.Add(itemName);
-            Debug.Log($"Unit Trust added: {itemName}");
-        }
-    }
-    
-    /// <summary>
-    /// Adds an Insurance item to the player's inventory
-    /// </summary>
-    public void AddInsurance(string itemName)
-    {
-        if (!string.IsNullOrEmpty(itemName) && !insuranceItems.Contains(itemName))
-        {
-            insuranceItems.Add(itemName);
-            Debug.Log($"Insurance added: {itemName}");
-        }
-    }
-    
-    /// <summary>
-    /// Removes a Real Estate item from the player's inventory
-    /// </summary>
-    public bool RemoveRealEstate(string itemName)
-    {
-        if (realEstateItems.Remove(itemName))
-        {
-            Debug.Log($"Real Estate removed: {itemName}");
-            return true;
+            if (currentCash >= amount)
+            {
+                currentCash -= amount;
+                Debug.Log($"Cash subtracted: {amount}. Current Cash: {currentCash}");
+                OnCashChanged?.Invoke(currentCash);
+                return true;
+            }
+            else
+            {
+                Debug.LogWarning($"Not enough cash! Need {amount}, have {currentCash}");
+                return false;
+            }
         }
         return false;
     }
     
     /// <summary>
-    /// Removes a Business item from the player's inventory
+    /// Adds CurrentPayday to cash (called when player passes Path01_Start)
     /// </summary>
-    public bool RemoveBusiness(string itemName)
+    public void AddPaydayToCash()
     {
-        if (businessItems.Remove(itemName))
+        float paydayAmount = CurrentPayday;
+        if (paydayAmount > 0)
         {
-            Debug.Log($"Business removed: {itemName}");
-            return true;
+            AddCash(paydayAmount);
+            Debug.Log($"Added CurrentPayday ({paydayAmount}) to cash. New Cash: {currentCash}");
         }
-        return false;
-    }
-    
-    /// <summary>
-    /// Removes a Stock item from the player's inventory
-    /// </summary>
-    public bool RemoveStock(string itemName)
-    {
-        if (stockItems.Remove(itemName))
-        {
-            Debug.Log($"Stock removed: {itemName}");
-            return true;
-        }
-        return false;
-    }
-    
-    /// <summary>
-    /// Removes a Unit Trust item from the player's inventory
-    /// </summary>
-    public bool RemoveUnitTrust(string itemName)
-    {
-        if (unitTrustItems.Remove(itemName))
-        {
-            Debug.Log($"Unit Trust removed: {itemName}");
-            return true;
-        }
-        return false;
-    }
-    
-    /// <summary>
-    /// Removes an Insurance item from the player's inventory
-    /// </summary>
-    public bool RemoveInsurance(string itemName)
-    {
-        if (insuranceItems.Remove(itemName))
-        {
-            Debug.Log($"Insurance removed: {itemName}");
-            return true;
-        }
-        return false;
     }
     
     /// <summary>
@@ -310,12 +228,9 @@ public class PlayerFinance : MonoBehaviour
     {
         incomeItems.Clear();
         expenseItems.Clear();
-        realEstateItems.Clear();
-        businessItems.Clear();
-        stockItems.Clear();
-        unitTrustItems.Clear();
-        insuranceItems.Clear();
+        currentCash = initialCash;
         OnPaydayChanged?.Invoke(CurrentPayday);
+        OnCashChanged?.Invoke(currentCash);
         Debug.Log("Player finance data reset.");
     }
     
@@ -339,12 +254,6 @@ public class PlayerFinance : MonoBehaviour
         {
             summary += $"  - {item.details}: {item.amount:F2}\n";
         }
-        
-        summary += $"\nReal Estate Items: {realEstateItems.Count}\n" +
-                   $"Business Items: {businessItems.Count}\n" +
-                   $"Stock Items: {stockItems.Count}\n" +
-                   $"Unit Trust Items: {unitTrustItems.Count}\n" +
-                   $"Insurance Items: {insuranceItems.Count}";
         
         return summary;
     }

@@ -29,6 +29,9 @@ public class GameManager : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private GameObject miniGamesUI;
     
+    [Header("Player Finance Reference")]
+    [SerializeField] private PlayerFinance playerFinance;
+    
     private int diceSum = 0;
     private bool isRolling = false;
     private float lastCheckTime = 0f;
@@ -75,6 +78,21 @@ public class GameManager : MonoBehaviour
         
         // Find KeyboardManager to check MiniGameStockMarket status
         keyboardManager = FindAnyObjectByType<StockManager>();
+        
+        // Find PlayerFinance if not assigned
+        if (playerFinance == null)
+        {
+            GameObject playerObj = GameObject.Find("Player");
+            if (playerObj != null)
+            {
+                playerFinance = playerObj.GetComponent<PlayerFinance>();
+            }
+            
+            if (playerFinance == null)
+            {
+                playerFinance = FindAnyObjectByType<PlayerFinance>();
+            }
+        }
         
         // Subscribe to player movement complete event
         if (player != null)
@@ -225,7 +243,7 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    private void SpawnDice()
+    public void SpawnDice()
     {
         // Check if player should use one dice (after stopping on Fortune Road)
         bool useOneDice = player != null && player.ShouldUseOneDice;
@@ -643,6 +661,21 @@ public class GameManager : MonoBehaviour
     {
         // Get the current waypoint name to check if a card will be shown
         string currentWaypointName = player != null ? player.GetCurrentWaypointName() : string.Empty;
+        
+        // Check if player passed Path01_Start and add CurrentPayday to cash
+        if (!string.IsNullOrEmpty(currentWaypointName) && currentWaypointName == "Path01_Start")
+        {
+            if (playerFinance != null)
+            {
+                playerFinance.AddPaydayToCash();
+                Debug.Log($"Player passed Path01_Start! Added CurrentPayday to cash.");
+            }
+            else
+            {
+                Debug.LogWarning("PlayerFinance not found! Cannot add payday to cash.");
+            }
+        }
+        
         bool willShowCard = false;
         
         // Check if a card will be spawned for this path
