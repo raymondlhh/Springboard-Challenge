@@ -53,6 +53,8 @@ public class CardsManager : MonoBehaviour
     private CardController currentBusinessCard;
     private string currentBusinessPathName;
     private bool isProcessingPath = false; // Flag to prevent duplicate processing
+    private PlayerController subscribedPlayerController = null; // Track which PlayerController we're subscribed to
+    private int subscribedPlayerID = -1; // Track which player ID we're subscribed to (for verification)
     
     public bool IsCardAnimating => isCardAnimating;
     
@@ -321,10 +323,14 @@ public class CardsManager : MonoBehaviour
         if (currentPlayerCtrl != null)
         {
             currentPlayerCtrl.OnMovementComplete += OnPlayerMovementComplete;
-            Debug.Log($"[CardsManager] ✓ Successfully subscribed to OnMovementComplete for player: {playerManager.CurrentPlayer.PlayerName}");
+            subscribedPlayerController = currentPlayerCtrl; // Store reference to subscribed controller
+            subscribedPlayerID = playerManager.CurrentPlayer.PlayerID; // Store player ID for verification
+            Debug.Log($"[CardsManager] ✓ Successfully subscribed to OnMovementComplete for player: {playerManager.CurrentPlayer.PlayerName} (ID: {subscribedPlayerID})");
         }
         else
         {
+            subscribedPlayerController = null; // Clear reference if subscription failed
+            subscribedPlayerID = -1; // Clear player ID
             Debug.LogError($"[CardsManager] ✗ Cannot subscribe: PlayerController is null for player {playerManager.CurrentPlayer.PlayerName}. This will prevent path processing!");
         }
     }
@@ -334,12 +340,23 @@ public class CardsManager : MonoBehaviour
     /// </summary>
     private void UnsubscribeFromPlayerEvents()
     {
-        // Try to unsubscribe from the current player
-        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
-        if (currentPlayerCtrl != null)
+        // Unsubscribe from the previously subscribed PlayerController
+        if (subscribedPlayerController != null)
         {
-            currentPlayerCtrl.OnMovementComplete -= OnPlayerMovementComplete;
+            subscribedPlayerController.OnMovementComplete -= OnPlayerMovementComplete;
             Debug.Log($"[CardsManager] Unsubscribed from player events for: {playerManager?.CurrentPlayer?.PlayerName ?? "Unknown"}");
+            subscribedPlayerController = null; // Clear reference
+            subscribedPlayerID = -1; // Clear player ID
+        }
+        else
+        {
+            // Fallback: Try to unsubscribe from current player if we don't have a stored reference
+            PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+            if (currentPlayerCtrl != null)
+            {
+                currentPlayerCtrl.OnMovementComplete -= OnPlayerMovementComplete;
+            }
+            subscribedPlayerID = -1; // Clear player ID
         }
     }
     
@@ -376,8 +393,56 @@ public class CardsManager : MonoBehaviour
     
     private void OnPlayerMovementComplete()
     {
-        string playerName = playerManager?.CurrentPlayer?.PlayerName ?? "Unknown";
-        Debug.Log($"[CardsManager] OnPlayerMovementComplete called for player: {playerName}");
+        // CRITICAL FIX: Only process paths when the movement is from the CURRENT player
+        // This prevents processing paths for players whose turn has already ended
+        // The event might fire after the turn has switched, so we need to verify the current player
+        
+        // First, check if we have a valid current player
+        if (playerManager == null || playerManager.CurrentPlayer == null)
+        {
+            Debug.LogWarning("[CardsManager] OnPlayerMovementComplete called but CurrentPlayer is null. Ignoring.");
+            return;
+        }
+        
+        // CRITICAL VERIFICATION: Check if the current player matches the player we're subscribed to
+        // This is the most reliable check - if the player ID doesn't match, the turn has switched
+        int currentPlayerID = playerManager.CurrentPlayer.PlayerID;
+        if (subscribedPlayerID >= 0 && currentPlayerID != subscribedPlayerID)
+        {
+            Debug.LogWarning($"[CardsManager] OnPlayerMovementComplete called but turn has already switched. Ignoring event from previous player. (Subscribed to Player ID: {subscribedPlayerID}, Current Player ID: {currentPlayerID}, Current Player: {playerManager.CurrentPlayer.PlayerName})");
+            return;
+        }
+        
+        // Get the current player's controller
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        
+        // Additional verification: Ensure the subscribed controller matches the current player's controller
+        if (subscribedPlayerController != null && currentPlayerCtrl != subscribedPlayerController)
+        {
+            Debug.LogWarning($"[CardsManager] OnPlayerMovementComplete called but PlayerController doesn't match subscribed controller. Ignoring. (Subscribed to: {subscribedPlayerController.name}, Current: {currentPlayerCtrl?.name ?? "null"})");
+            return;
+        }
+        
+        if (currentPlayerCtrl == null)
+        {
+            Debug.LogWarning("[CardsManager] OnPlayerMovementComplete called but CurrentPlayer's controller is null. Ignoring.");
+            return;
+        }
+        
+        // CRITICAL: Verify that the player has actually finished moving (not just standing at a path)
+        // This prevents processing paths when a player's turn starts (they might be standing at a path from a previous turn)
+        // The IsMoving flag should be false when movement completes, but we check to be safe
+        if (currentPlayerCtrl.IsMoving)
+        {
+            Debug.LogWarning("[CardsManager] OnPlayerMovementComplete called but player is still moving. This shouldn't happen. Ignoring.");
+            return;
+        }
+        
+        // Use the current player's controller (which should match subscribed controller)
+        PlayerController controllerToUse = currentPlayerCtrl;
+        
+        string playerName = playerManager.CurrentPlayer.PlayerName;
+        Debug.Log($"[CardsManager] OnPlayerMovementComplete called for player: {playerName} (Player ID: {currentPlayerID})");
         
         // Prevent duplicate processing
         if (isProcessingPath)
@@ -390,18 +455,9 @@ public class CardsManager : MonoBehaviour
         
         try
         {
-            // Get the current player's controller
-            PlayerController currentPlayerCtrl = GetCurrentPlayerController();
-            
-            // Get the current waypoint name from player
-            if (currentPlayerCtrl == null)
-            {
-                Debug.LogWarning($"[CardsManager] Current player controller is null! Cannot process path. Player: {playerName}");
-                isProcessingPath = false;
-                return;
-            }
-            
-            string waypointName = currentPlayerCtrl.GetCurrentWaypointName();
+            // Get the waypoint name from the current player's controller
+            // This ensures we're processing the path for the correct player
+            string waypointName = controllerToUse.GetCurrentWaypointName();
             
             if (string.IsNullOrEmpty(waypointName))
             {
