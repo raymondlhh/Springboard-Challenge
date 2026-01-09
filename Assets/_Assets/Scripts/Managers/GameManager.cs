@@ -26,6 +26,10 @@ public class GameManager : MonoBehaviour
     [Header("Card Manager Reference")]
     [SerializeField] private CardsManager cardsManager;
     
+    [Header("Stock Path Manager Reference")]
+    [Tooltip("Reference to StockPathManager. Will auto-find if not assigned.")]
+    [SerializeField] private StockPathManager stockPathManager;
+    
     [Header("UI References")]
     [SerializeField] private GameObject miniGamesUI;
     
@@ -77,6 +81,12 @@ public class GameManager : MonoBehaviour
         if (cardsManager == null)
         {
             cardsManager = FindAnyObjectByType<CardsManager>();
+        }
+        
+        // Find StockPathManager if not assigned
+        if (stockPathManager == null)
+        {
+            stockPathManager = FindAnyObjectByType<StockPathManager>();
         }
         
         // Find KeyboardManager to check MiniGameStockMarket status
@@ -761,6 +771,27 @@ public class GameManager : MonoBehaviour
         PlayerController currentPlayerCtrl = GetCurrentPlayerController();
         string currentWaypointName = currentPlayerCtrl != null ? currentPlayerCtrl.GetCurrentWaypointName() : string.Empty;
         
+        // PRIORITY 1: Check if this is a Stock path (handled by StockPathManager)
+        // Stock paths activate the StockMarket and must complete before switching players
+        bool isStockPath = false;
+        if (stockPathManager != null && !string.IsNullOrEmpty(currentWaypointName))
+        {
+            isStockPath = stockPathManager.IsStockPath(currentWaypointName);
+        }
+        else if (!string.IsNullOrEmpty(currentWaypointName))
+        {
+            // Fallback: Check if path contains "Stocks" keyword if StockPathManager is not available
+            isStockPath = currentWaypointName.Contains("Stocks", System.StringComparison.OrdinalIgnoreCase);
+        }
+        
+        if (isStockPath)
+        {
+            Debug.Log($"[GameManager] Stock path detected: '{currentWaypointName}'. Waiting for StockMarket to complete before switching players.");
+            // Wait for stock market to complete, then spawn dice and switch to next player
+            StartCoroutine(WaitForStockMarketAndRespawnDice());
+            return;
+        }
+        
         bool willShowCard = false;
         
         // Check if a card will be spawned for this path
@@ -822,6 +853,51 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(0.1f);
         
         // Card has been destroyed, spawn dice back
+        SpawnDice();
+        isProcessingDiceResult = false;
+        
+        // Switch to next player's turn
+        SwitchToNextPlayer();
+    }
+    
+    /// <summary>
+    /// Waits for the StockMarket minigame to complete before spawning dice and switching to next player
+    /// </summary>
+    private IEnumerator WaitForStockMarketAndRespawnDice()
+    {
+        Debug.Log("[GameManager] Waiting for StockMarket to activate...");
+        
+        // First, wait a few frames for StockMarket to activate
+        int maxWaitFrames = 10;
+        int framesWaited = 0;
+        while (!IsMiniGameActive() && framesWaited < maxWaitFrames)
+        {
+            yield return null;
+            framesWaited++;
+        }
+        
+        // If StockMarket didn't activate, log a warning but continue
+        if (!IsMiniGameActive())
+        {
+            Debug.LogWarning("[GameManager] StockMarket did not activate. Proceeding anyway.");
+        }
+        else
+        {
+            Debug.Log("[GameManager] StockMarket activated. Waiting for it to complete...");
+        }
+        
+        // Now wait until StockMarket is no longer active (player has finished with it)
+        while (IsMiniGameActive())
+        {
+            yield return null;
+        }
+        
+        Debug.Log("[GameManager] StockMarket completed. Spawning dice and switching to next player.");
+        
+        // Add a small delay after stock market closes to ensure clean state
+        yield return new WaitForSeconds(0.1f);
+        
+        // StockMarket has been closed, spawn dice back
         SpawnDice();
         isProcessingDiceResult = false;
         

@@ -13,6 +13,14 @@ public class CardsManager : MonoBehaviour
     [SerializeField] private GameObject[] unitTrustFixedIncomeCards = new GameObject[3];
     [SerializeField] private GameObject[] fortuneRoadCards = new GameObject[5];
     
+    [Header("Paths Without Cards")]
+    [Tooltip("Drag and drop path GameObjects here. These paths will NOT spawn any cards. Player will skip card and spawn dice directly.")]
+    [SerializeField] private List<GameObject> pathsWithoutCards = new List<GameObject>();
+    
+    [Header("Stock Path Manager Reference")]
+    [Tooltip("Reference to StockPathManager. Will auto-find if not assigned. Handles all Stock path logic separately.")]
+    [SerializeField] private StockPathManager stockPathManager;
+    
     [Header("Card Spawn Points")]
     [SerializeField] private Transform cardsStartPath;
     [SerializeField] private Transform cardsEndPath;
@@ -28,6 +36,7 @@ public class CardsManager : MonoBehaviour
     [SerializeField] private PlayerManager playerManager;
     
     [Header("Debug Manager Reference")]
+    [Tooltip("Legacy reference - Stock path handling is now done by StockPathManager. This is kept for backward compatibility.")]
     [SerializeField] private StockManager debugManager;
     
     [Header("Real Estate Settings")]
@@ -43,6 +52,7 @@ public class CardsManager : MonoBehaviour
     private string currentRealEstatePathName;
     private CardController currentBusinessCard;
     private string currentBusinessPathName;
+    private bool isProcessingPath = false; // Flag to prevent duplicate processing
     
     public bool IsCardAnimating => isCardAnimating;
     
@@ -56,14 +66,74 @@ public class CardsManager : MonoBehaviour
             return false;
         }
         
-        // Stocks paths should not spawn cards (they activate StockMarket instead)
+        // Check if this is a Stock path (handled by StockPathManager - highest priority)
+        if (stockPathManager != null && stockPathManager.IsStockPath(pathName))
+        {
+            Debug.Log($"Path '{pathName}' is a Stock path. No card will spawn (will activate StockMarket instead).");
+            return false;
+        }
+        
+        // Fallback: Check if path contains "Stocks" keyword (in case StockPathManager is not available)
         if (pathName.Contains("Stocks", System.StringComparison.OrdinalIgnoreCase))
         {
+            Debug.Log($"Path '{pathName}' contains 'Stocks' keyword. No card will spawn.");
+            return false;
+        }
+        
+        // Check if this path is in the "paths without cards" list
+        if (IsPathInNullCardsList(pathName))
+        {
+            Debug.Log($"Path '{pathName}' is in the null cards list. No card will spawn.");
             return false;
         }
         
         var (cardPrefab, _) = GetCardPrefabForPath(pathName);
         return cardPrefab != null;
+    }
+    
+    /// <summary>
+    /// Checks if a path is in the list of paths that should not spawn cards
+    /// </summary>
+    private bool IsPathInNullCardsList(string pathName)
+    {
+        if (pathsWithoutCards == null || pathsWithoutCards.Count == 0)
+        {
+            return false;
+        }
+        
+        // Normalize the input path name
+        string normalizedPathName = pathName?.Trim() ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(normalizedPathName))
+        {
+            return false;
+        }
+        
+        // Check for exact match (case-insensitive) by comparing GameObject names
+        foreach (GameObject pathObject in pathsWithoutCards)
+        {
+            if (pathObject == null)
+            {
+                continue;
+            }
+            
+            // Normalize the GameObject's name
+            string objectName = pathObject.name?.Trim() ?? string.Empty;
+            
+            if (string.IsNullOrEmpty(objectName))
+            {
+                continue;
+            }
+            
+            // Compare the GameObject's name with the path name (case-insensitive)
+            if (normalizedPathName.Equals(objectName, System.StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.Log($"[CardsManager] Path '{normalizedPathName}' matched null cards list entry: '{objectName}'");
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     void Start()
@@ -78,6 +148,28 @@ public class CardsManager : MonoBehaviour
         if (playerManager != null)
         {
             playerManager.OnCurrentPlayerChanged += OnCurrentPlayerChanged;
+            
+            // Immediately check if there's already a current player (in case PlayerManager initialized first)
+            // and subscribe to them right away, not just in the delayed coroutine
+            if (playerManager.CurrentPlayer != null)
+            {
+                Debug.Log($"[CardsManager] Found existing CurrentPlayer ({playerManager.CurrentPlayer.PlayerName}) during Start(). Subscribing immediately.");
+                SubscribeToCurrentPlayerEvents();
+            }
+        }
+        
+        // Find StockPathManager if not assigned
+        if (stockPathManager == null)
+        {
+            stockPathManager = FindAnyObjectByType<StockPathManager>();
+            if (stockPathManager != null)
+            {
+                Debug.Log("[CardsManager] StockPathManager found. Stock paths will be handled by StockPathManager.");
+            }
+            else
+            {
+                Debug.LogWarning("[CardsManager] StockPathManager not found. Stock path detection may not work correctly.");
+            }
         }
         
         // Find card spawn points if not assigned
@@ -86,7 +178,7 @@ public class CardsManager : MonoBehaviour
             FindCardSpawnPoints();
         }
         
-        // Find DebugManager if not assigned
+        // Find DebugManager if not assigned (legacy - kept for backward compatibility)
         if (debugManager == null)
         {
             debugManager = FindAnyObjectByType<StockManager>();
@@ -137,7 +229,8 @@ public class CardsManager : MonoBehaviour
         }
         
         // Subscribe to current player's movement complete event
-        SubscribeToCurrentPlayerEvents();
+        // Use a coroutine to ensure PlayerManager has initialized first
+        StartCoroutine(SubscribeToCurrentPlayerEventsDelayed());
     }
     
     /// <summary>
@@ -151,7 +244,57 @@ public class CardsManager : MonoBehaviour
         // Subscribe to new player
         SubscribeToCurrentPlayerEvents();
         
-        Debug.Log($"CardsManager: Current player changed to {newPlayer.PlayerName}");
+        Debug.Log($"[CardsManager] Current player changed to {newPlayer?.PlayerName ?? "null"}");
+        
+        // Verify subscription worked
+        if (newPlayer != null)
+        {
+            PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+            if (currentPlayerCtrl == null)
+            {
+                Debug.LogWarning($"[CardsManager] OnCurrentPlayerChanged: Player {newPlayer.PlayerName} exists but PlayerController is null. Subscription may have failed.");
+            }
+            else
+            {
+                Debug.Log($"[CardsManager] Successfully subscribed to {newPlayer.PlayerName}'s OnMovementComplete event.");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Subscribe to current player's events with a delay to ensure PlayerManager has initialized
+    /// </summary>
+    private IEnumerator SubscribeToCurrentPlayerEventsDelayed()
+    {
+        // Wait one frame to ensure PlayerManager.Start() has executed
+        yield return null;
+        
+        // Retry up to 10 frames if CurrentPlayer is still null (in case PlayerManager initializes later)
+        int retryCount = 0;
+        while (playerManager != null && playerManager.CurrentPlayer == null && retryCount < 10)
+        {
+            yield return null;
+            retryCount++;
+        }
+        
+        // Now subscribe to current player events
+        // This handles the case where OnCurrentPlayerChanged was fired before we subscribed to it
+        SubscribeToCurrentPlayerEvents();
+        
+        // Also verify subscription worked - if CurrentPlayer exists but we couldn't subscribe,
+        // log a warning to help debug
+        if (playerManager != null && playerManager.CurrentPlayer != null)
+        {
+            PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+            if (currentPlayerCtrl == null)
+            {
+                Debug.LogWarning($"[CardsManager] Delayed subscription: CurrentPlayer exists ({playerManager.CurrentPlayer.PlayerName}) but PlayerController is null. This may cause issues.");
+            }
+            else
+            {
+                Debug.Log($"[CardsManager] Delayed subscription successful for: {playerManager.CurrentPlayer.PlayerName}");
+            }
+        }
     }
     
     /// <summary>
@@ -159,10 +302,30 @@ public class CardsManager : MonoBehaviour
     /// </summary>
     private void SubscribeToCurrentPlayerEvents()
     {
+        // First unsubscribe from any previous player to prevent duplicate subscriptions
+        UnsubscribeFromPlayerEvents();
+        
+        if (playerManager == null)
+        {
+            Debug.LogWarning("[CardsManager] Cannot subscribe: PlayerManager is null");
+            return;
+        }
+        
+        if (playerManager.CurrentPlayer == null)
+        {
+            Debug.LogWarning("[CardsManager] Cannot subscribe: CurrentPlayer is null");
+            return;
+        }
+        
         PlayerController currentPlayerCtrl = GetCurrentPlayerController();
         if (currentPlayerCtrl != null)
         {
             currentPlayerCtrl.OnMovementComplete += OnPlayerMovementComplete;
+            Debug.Log($"[CardsManager] ✓ Successfully subscribed to OnMovementComplete for player: {playerManager.CurrentPlayer.PlayerName}");
+        }
+        else
+        {
+            Debug.LogError($"[CardsManager] ✗ Cannot subscribe: PlayerController is null for player {playerManager.CurrentPlayer.PlayerName}. This will prevent path processing!");
         }
     }
     
@@ -171,10 +334,12 @@ public class CardsManager : MonoBehaviour
     /// </summary>
     private void UnsubscribeFromPlayerEvents()
     {
+        // Try to unsubscribe from the current player
         PlayerController currentPlayerCtrl = GetCurrentPlayerController();
         if (currentPlayerCtrl != null)
         {
             currentPlayerCtrl.OnMovementComplete -= OnPlayerMovementComplete;
+            Debug.Log($"[CardsManager] Unsubscribed from player events for: {playerManager?.CurrentPlayer?.PlayerName ?? "Unknown"}");
         }
     }
     
@@ -211,53 +376,88 @@ public class CardsManager : MonoBehaviour
     
     private void OnPlayerMovementComplete()
     {
-        // Get the current player's controller
-        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        string playerName = playerManager?.CurrentPlayer?.PlayerName ?? "Unknown";
+        Debug.Log($"[CardsManager] OnPlayerMovementComplete called for player: {playerName}");
         
-        // Get the current waypoint name from player
-        if (currentPlayerCtrl != null)
+        // Prevent duplicate processing
+        if (isProcessingPath)
         {
+            Debug.LogWarning("[CardsManager] Already processing a path, ignoring duplicate call.");
+            return;
+        }
+        
+        isProcessingPath = true;
+        
+        try
+        {
+            // Get the current player's controller
+            PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+            
+            // Get the current waypoint name from player
+            if (currentPlayerCtrl == null)
+            {
+                Debug.LogWarning($"[CardsManager] Current player controller is null! Cannot process path. Player: {playerName}");
+                isProcessingPath = false;
+                return;
+            }
+            
             string waypointName = currentPlayerCtrl.GetCurrentWaypointName();
             
             if (string.IsNullOrEmpty(waypointName))
             {
-                Debug.LogWarning("Waypoint name is empty! Cannot process path.");
+                Debug.LogWarning("[CardsManager] Waypoint name is empty! Cannot process path.");
                 return;
             }
             
-            // Check if path contains "Stocks" keyword and activate minigame
-            if (waypointName.Contains("Stocks", System.StringComparison.OrdinalIgnoreCase))
+            // Normalize the waypoint name (trim whitespace)
+            waypointName = waypointName.Trim();
+            
+            Debug.Log($"[CardsManager] ===== Player {playerName} stopped at path: '{waypointName}' =====");
+            
+            // PRIORITY 1: Check if this is a Stock path (handled by StockPathManager)
+            // StockPathManager handles its own subscription to player movement events,
+            // so we just need to skip card spawning for stock paths
+            bool isStockPath = false;
+            if (stockPathManager != null)
             {
-                // Try to find StockManager if not already assigned
-                if (debugManager == null)
-                {
-                    debugManager = FindAnyObjectByType<StockManager>();
-                }
-                
-                if (debugManager != null)
-                {
-                    debugManager.ActivateMiniGame();
-                    Debug.Log($"StockMarket activated for path: {waypointName}");
-                }
-                else
-                {
-                    Debug.LogWarning($"StockManager not found! Cannot activate minigame for Stocks path: {waypointName}");
-                }
+                isStockPath = stockPathManager.IsStockPath(waypointName);
+            }
+            else
+            {
+                // Fallback: Check if path contains "Stocks" keyword if StockPathManager is not available
+                isStockPath = waypointName.Contains("Stocks", System.StringComparison.OrdinalIgnoreCase);
             }
             
-            // Only spawn card if one should be spawned for this path
-            if (WillSpawnCardForPath(waypointName))
+            if (isStockPath)
             {
+                Debug.Log($"[CardsManager] Stock path detected: '{waypointName}' (Player: {playerName}). Skipping card spawn - StockPathManager will handle activation.");
+                // StockPathManager handles the activation, we just skip card spawning
+                return;
+            }
+            
+            // PRIORITY 2: Check if this path is in the "paths without cards" list
+            bool isInNullList = IsPathInNullCardsList(waypointName);
+            if (isInNullList)
+            {
+                Debug.Log($"[CardsManager] ✓ Path '{waypointName}' is in the null cards list. No card will spawn. (Player: {playerName})");
+                return;
+            }
+            
+            // PRIORITY 3: Only spawn card if one should be spawned for this path
+            bool willSpawn = WillSpawnCardForPath(waypointName);
+            if (willSpawn)
+            {
+                Debug.Log($"[CardsManager] → Spawning card for path: '{waypointName}' (Player: {playerName})");
                 SpawnCardForPath(waypointName);
             }
             else
             {
-                Debug.Log($"No card will be spawned for path: {waypointName}");
+                Debug.Log($"[CardsManager] → No card will be spawned for path: '{waypointName}' (Player: {playerName})");
             }
         }
-        else
+        finally
         {
-            Debug.LogWarning("Current player controller is null! Cannot process path.");
+            isProcessingPath = false;
         }
     }
     
@@ -354,9 +554,24 @@ public class CardsManager : MonoBehaviour
         // Normalize path name (remove spaces, handle case)
         string normalizedPath = pathName.Trim();
         
-        // Stocks paths should never spawn cards (they activate StockMarket instead)
+        // Check if this is a Stock path (handled by StockPathManager - highest priority)
+        if (stockPathManager != null && stockPathManager.IsStockPath(normalizedPath))
+        {
+            Debug.Log($"Path '{normalizedPath}' is a Stock path. Returning null card (will activate StockMarket instead).");
+            return (null, false);
+        }
+        
+        // Fallback: Check if path contains "Stocks" keyword (in case StockPathManager is not available)
         if (normalizedPath.Contains("Stocks", System.StringComparison.OrdinalIgnoreCase))
         {
+            Debug.Log($"Path '{normalizedPath}' contains 'Stocks' keyword. Returning null card.");
+            return (null, false);
+        }
+        
+        // Check if this path is in the "paths without cards" list
+        if (IsPathInNullCardsList(normalizedPath))
+        {
+            Debug.Log($"Path '{normalizedPath}' is in the null cards list. Returning null card.");
             return (null, false);
         }
         
@@ -424,56 +639,89 @@ public class CardsManager : MonoBehaviour
         }
         
         // Check for category match (e.g., "Business", "Chance", "FixedIncome", etc.)
-        // Handle different naming conventions
-        // IMPORTANT: Only match if the category name starts with a known category prefix
+        // IMPORTANT: Only match if the category name EXACTLY matches a known category prefix
+        // AND there are actual cards assigned in the Inspector for that category
         // This prevents random matching of unrelated paths
         GameObject randomCard = null;
         bool isKnownCategory = false;
+        string matchedCategory = null;
         
+        // Check each known category with strict matching
+        // Only match if category name starts with the known prefix AND we have cards for it
         if (categoryName.StartsWith("Business", System.StringComparison.OrdinalIgnoreCase))
         {
-            randomCard = GetRandomCardFromArray(businessCards, "Business");
-            isKnownCategory = true;
+            // Check if we actually have Business cards assigned
+            if (HasValidCardsInArray(businessCards))
+            {
+                randomCard = GetRandomCardFromArray(businessCards, "Business");
+                isKnownCategory = true;
+                matchedCategory = "Business";
+            }
         }
         else if (categoryName.StartsWith("Chance", System.StringComparison.OrdinalIgnoreCase))
         {
-            randomCard = GetRandomCardFromArray(chanceCards, "Chance");
-            isKnownCategory = true;
+            if (HasValidCardsInArray(chanceCards))
+            {
+                randomCard = GetRandomCardFromArray(chanceCards, "Chance");
+                isKnownCategory = true;
+                matchedCategory = "Chance";
+            }
         }
         else if (categoryName.StartsWith("MarketWatch", System.StringComparison.OrdinalIgnoreCase))
         {
-            randomCard = GetRandomCardFromArray(marketWatchCards, "MarketWatch");
-            isKnownCategory = true;
+            if (HasValidCardsInArray(marketWatchCards))
+            {
+                randomCard = GetRandomCardFromArray(marketWatchCards, "MarketWatch");
+                isKnownCategory = true;
+                matchedCategory = "MarketWatch";
+            }
         }
         else if (categoryName.StartsWith("RealEstate", System.StringComparison.OrdinalIgnoreCase))
         {
-            randomCard = GetRandomCardFromArray(realEstateCards, "RealEstate");
-            isKnownCategory = true;
+            if (HasValidCardsInArray(realEstateCards))
+            {
+                randomCard = GetRandomCardFromArray(realEstateCards, "RealEstate");
+                isKnownCategory = true;
+                matchedCategory = "RealEstate";
+            }
         }
         else if (categoryName.StartsWith("UnitTrustEquities", System.StringComparison.OrdinalIgnoreCase) || 
                  categoryName.StartsWith("MutualFundEquities", System.StringComparison.OrdinalIgnoreCase) ||
                  categoryName.StartsWith("Equities", System.StringComparison.OrdinalIgnoreCase))
         {
-            randomCard = GetRandomCardFromArray(unitTrustEquitiesCards, "UnitTrustEquities");
-            isKnownCategory = true;
+            if (HasValidCardsInArray(unitTrustEquitiesCards))
+            {
+                randomCard = GetRandomCardFromArray(unitTrustEquitiesCards, "UnitTrustEquities");
+                isKnownCategory = true;
+                matchedCategory = "UnitTrustEquities";
+            }
         }
         else if (categoryName.StartsWith("UnitTrustFixedIncome", System.StringComparison.OrdinalIgnoreCase) || 
                  categoryName.StartsWith("MutualFundFixedIncome", System.StringComparison.OrdinalIgnoreCase) ||
                  categoryName.StartsWith("FixedIncome", System.StringComparison.OrdinalIgnoreCase))
         {
-            randomCard = GetRandomCardFromArray(unitTrustFixedIncomeCards, "UnitTrustFixedIncome");
-            isKnownCategory = true;
+            if (HasValidCardsInArray(unitTrustFixedIncomeCards))
+            {
+                randomCard = GetRandomCardFromArray(unitTrustFixedIncomeCards, "UnitTrustFixedIncome");
+                isKnownCategory = true;
+                matchedCategory = "UnitTrustFixedIncome";
+            }
         }
         
-        // Only return a card if it's a known category and we found a valid card
+        // Only return a card if:
+        // 1. It's a known category
+        // 2. We found a valid card in that category
+        // 3. The category actually has cards assigned in the Inspector
         if (isKnownCategory && randomCard != null)
         {
+            Debug.Log($"Matched category '{matchedCategory}' for path '{pathName}'. Spawning random card: {randomCard.name}");
             // If the category name doesn't have a number, it's a random selection
             // If it has a number but no exact match was found, it's also random (fallback)
             return (randomCard, !isSpecificCard);
         }
         
         // Unknown category or no card found - return null (don't spawn any card)
+        Debug.Log($"No card match found for path '{pathName}' (category: '{categoryName}'). Skipping card spawn.");
         return (null, false);
     }
     
@@ -558,6 +806,27 @@ public class CardsManager : MonoBehaviour
         }
         
         return null;
+    }
+    
+    /// <summary>
+    /// Checks if an array has any valid (non-null) cards
+    /// </summary>
+    private bool HasValidCardsInArray(GameObject[] cardArray)
+    {
+        if (cardArray == null || cardArray.Length == 0)
+        {
+            return false;
+        }
+        
+        foreach (GameObject card in cardArray)
+        {
+            if (card != null)
+            {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     /// <summary>

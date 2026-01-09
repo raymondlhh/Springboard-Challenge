@@ -369,9 +369,10 @@ MonoBehaviour:
   dicePrefab: {fileID: 512676549986405767, guid: 133e4974bd8608147bcc3880ae313a26, type: 3}
   diceCheckInterval: 0.5
   IsDebugging: 0
-  debugFixedSteps: 3
+  debugFixedSteps: 4
   playerManager: {fileID: 1152732730}
   cardsManager: {fileID: 324961890}
+  stockPathManager: {fileID: 0}
   miniGamesUI: {fileID: 582922567}
 --- !u!1 &37908566
 GameObject:
@@ -2786,6 +2787,15 @@ MonoBehaviour:
   - {fileID: 2230860844638815799, guid: ff06a12315490704d8e95fa972267f29, type: 3}
   - {fileID: 4064141503966124030, guid: 05789d37feae34a469d8ed4b8a2c8e02, type: 3}
   - {fileID: 4308141281054432705, guid: 5e1cd934b9dc72b4fb24a6e3b1782302, type: 3}
+  pathsWithoutCards:
+  - {fileID: 657847123}
+  - {fileID: 258310533}
+  - {fileID: 685936242}
+  - {fileID: 820032013}
+  - {fileID: 1606940017}
+  - {fileID: 1889638472}
+  - {fileID: 510973236}
+  stockPathManager: {fileID: 835444306}
   cardsStartPath: {fileID: 19521630}
   cardsEndPath: {fileID: 37908567}
   cardMoveSpeed: 3
@@ -6524,6 +6534,7 @@ GameObject:
   m_Component:
   - component: {fileID: 835444304}
   - component: {fileID: 835444305}
+  - component: {fileID: 835444306}
   m_Layer: 0
   m_Name: StockManager
   m_TagString: Untagged
@@ -6569,6 +6580,28 @@ MonoBehaviour:
   cameraOriginalPosition: {fileID: 752048851}
   useSmoothTransition: 1
   transitionSpeed: 2
+--- !u!114 &835444306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 835444303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48a363123a3f6474dbcb5f2e742addc2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stockPaths:
+  - {fileID: 1020855472}
+  - {fileID: 953805249}
+  - {fileID: 1214814249}
+  - {fileID: 592992906}
+  - {fileID: 1503007312}
+  - {fileID: 165298720}
+  stockManager: {fileID: 835444305}
+  playerManager: {fileID: 1152732730}
+  enableDebugLogs: 1
 --- !u!1 &870994191
 GameObject:
   m_ObjectHideFlags: 0
@@ -8206,7 +8239,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 582d95f79ef6de84b9c138bf1f239eba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfPlayers: 2
+  numberOfPlayers: 4
   playerPrefab: {fileID: 98607575583157904, guid: cc311b4f249efe14f8c3b14680b21500, type: 3}
   playerUIPrefab: {fileID: 2869733658695302378, guid: 2de2d6af710bd6944ac67669a8780397, type: 3}
   playerNames:
@@ -8219,7 +8252,7 @@ MonoBehaviour:
   - 6600
   - 6600
   - 6600
-  playerIsAI: 00010000
+  playerIsAI: 00000101
   playerPurchaseProbability:
   - 1
   - 1
