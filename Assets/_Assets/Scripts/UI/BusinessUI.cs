@@ -16,8 +16,8 @@ public class BusinessUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI incomePerVisitText;
     
     [Header("References")]
-    [SerializeField] private PlayerFinance playerFinance;
     [SerializeField] private BusinessData businessData;
+    [SerializeField] private PlayerManager playerManager; // Reference to PlayerManager
     
     private BusinessData.BusinessProperty currentBusiness;
     private CardController currentCard;
@@ -73,19 +73,10 @@ public class BusinessUI : MonoBehaviour
             noButton.onClick.AddListener(OnNoClicked);
         }
         
-        // Find PlayerFinance if not assigned
-        if (playerFinance == null)
+        // Find PlayerManager if not assigned
+        if (playerManager == null)
         {
-            GameObject playerObj = GameObject.Find("Player");
-            if (playerObj != null)
-            {
-                playerFinance = playerObj.GetComponent<PlayerFinance>();
-            }
-            
-            if (playerFinance == null)
-            {
-                playerFinance = FindAnyObjectByType<PlayerFinance>();
-            }
+            playerManager = FindAnyObjectByType<PlayerManager>();
         }
         
         // Load PlayerItem prefab
@@ -161,22 +152,23 @@ public class BusinessUI : MonoBehaviour
             return;
         }
         
-        // Check if player has enough cash (using capital)
-        if (playerFinance == null)
+        // Get current player's finance
+        PlayerFinance currentPlayerFinance = GetCurrentPlayerFinance();
+        if (currentPlayerFinance == null)
         {
             Debug.LogError("PlayerFinance is null! Cannot purchase business.");
             return;
         }
         
         // Check if player has enough cash for the capital
-        if (playerFinance.CurrentCash < currentBusiness.capital)
+        if (currentPlayerFinance.CurrentCash < currentBusiness.capital)
         {
-            Debug.LogWarning($"Not enough cash! Need {currentBusiness.capital}, have {playerFinance.CurrentCash}");
+            Debug.LogWarning($"Not enough cash! Need {currentBusiness.capital}, have {currentPlayerFinance.CurrentCash}");
             return;
         }
         
         // Subtract the capital from player's cash
-        bool cashSubtracted = playerFinance.SubtractCash(currentBusiness.capital);
+        bool cashSubtracted = currentPlayerFinance.SubtractCash(currentBusiness.capital);
         if (!cashSubtracted)
         {
             Debug.LogWarning("Failed to subtract cash! Purchase cancelled.");
@@ -184,23 +176,30 @@ public class BusinessUI : MonoBehaviour
         }
         
         // Add cash flow to income items
-        if (playerFinance != null && !string.IsNullOrEmpty(businessName))
+        if (currentPlayerFinance != null && !string.IsNullOrEmpty(businessName))
         {
             // Add income item with business name as details and cash flow as amount
-            playerFinance.AddIncomeItem(businessName, currentBusiness.cashFlow);
+            currentPlayerFinance.AddIncomeItem(businessName, currentBusiness.cashFlow);
             Debug.Log($"Added income item: {businessName} - {currentBusiness.cashFlow}");
         }
         
         // Spawn PlayerItem prefab at the path transform
+        GameObject playerItem = null;
         if (playerItemPrefab != null && targetPathTransform != null)
         {
-            GameObject playerItem = Instantiate(playerItemPrefab, targetPathTransform.position, targetPathTransform.rotation, targetPathTransform);
+            playerItem = Instantiate(playerItemPrefab, targetPathTransform.position, targetPathTransform.rotation, targetPathTransform);
             playerItem.name = $"PlayerItem_{businessName}";
             Debug.Log($"Spawned PlayerItem at {targetPathTransform.name}");
         }
         else
         {
             Debug.LogWarning("Cannot spawn PlayerItem: Prefab or transform is null!");
+        }
+        
+        // Add PlayerItem to current player's owned items
+        if (playerManager != null && playerManager.CurrentPlayer != null && playerItem != null)
+        {
+            playerManager.CurrentPlayer.AddPlayerItem(playerItem);
         }
         
         // Hide UI
@@ -250,5 +249,19 @@ public class BusinessUI : MonoBehaviour
         {
             businessUIPanel.SetActive(false);
         }
+    }
+    
+    /// <summary>
+    /// Get the current player's PlayerFinance
+    /// </summary>
+    private PlayerFinance GetCurrentPlayerFinance()
+    {
+        if (playerManager != null && playerManager.CurrentPlayer != null)
+        {
+            return playerManager.CurrentPlayer.PlayerFinance;
+        }
+        
+        // Return null silently - this is expected during initialization
+        return null;
     }
 }

@@ -36,6 +36,7 @@ public class PlayerController : MonoBehaviour
     public bool IsMoving => isMoving;
     public int CurrentPathIndex => currentPathIndex;
     public bool ShouldUseOneDice => shouldUseOneDice; // Public property to check if one dice should be used
+    public List<Transform> PathWaypoints => pathWaypoints; // Public access to path waypoints
     
     /// <summary>
     /// Clears the one dice flag so next roll will use two dice
@@ -522,6 +523,42 @@ public class PlayerController : MonoBehaviour
     public void OnDiceRollComplete(int diceSum)
     {
         MovePlayer(diceSum);
+    }
+    
+    /// <summary>
+    /// Set path waypoints programmatically
+    /// </summary>
+    public void SetPathWaypoints(List<Transform> waypoints)
+    {
+        if (waypoints != null)
+        {
+            pathWaypoints = new List<Transform>(waypoints);
+            Debug.Log($"PlayerController: Assigned {pathWaypoints.Count} path waypoints");
+        }
+    }
+    
+    /// <summary>
+    /// Set Fortune Road waypoints programmatically
+    /// </summary>
+    public void SetFortuneRoadWaypoints(List<Transform> waypoints)
+    {
+        if (waypoints != null)
+        {
+            fortuneRoadWaypoints = new List<Transform>(waypoints);
+            Debug.Log($"PlayerController: Assigned {fortuneRoadWaypoints.Count} Fortune Road waypoints");
+        }
+    }
+    
+    /// <summary>
+    /// Set Path39 waypoint (exit from Fortune Road)
+    /// </summary>
+    public void SetPath39Waypoint(Transform waypoint)
+    {
+        path39Waypoint = waypoint;
+        if (waypoint != null)
+        {
+            Debug.Log($"PlayerController: Assigned Path39 waypoint: {waypoint.name}");
+        }
     }
 }
 

@@ -23,8 +23,9 @@ public class CardsManager : MonoBehaviour
     [Tooltip("Time in seconds the card waits before being destroyed after reaching the end position")]
     [SerializeField] private float cardWaitDuration = 3f;
     
-    [Header("Player Reference")]
-    [SerializeField] private PlayerController player;
+    [Header("Player Manager Reference")]
+    [Tooltip("Reference to PlayerManager. Will auto-find if not assigned. Supports 1-4 players.")]
+    [SerializeField] private PlayerManager playerManager;
     
     [Header("Debug Manager Reference")]
     [SerializeField] private StockManager debugManager;
@@ -61,10 +62,16 @@ public class CardsManager : MonoBehaviour
     
     void Start()
     {
-        // Find player if not assigned
-        if (player == null)
+        // Find PlayerManager if not assigned
+        if (playerManager == null)
         {
-            FindPlayer();
+            playerManager = FindAnyObjectByType<PlayerManager>();
+        }
+        
+        // Subscribe to PlayerManager events
+        if (playerManager != null)
+        {
+            playerManager.OnCurrentPlayerChanged += OnCurrentPlayerChanged;
         }
         
         // Find card spawn points if not assigned
@@ -123,29 +130,62 @@ public class CardsManager : MonoBehaviour
             businessUIController.OnPurchaseCancelled += OnBusinessPurchaseCancelled;
         }
         
-        // Subscribe to player movement complete event
-        if (player != null)
+        // Subscribe to current player's movement complete event
+        SubscribeToCurrentPlayerEvents();
+    }
+    
+    /// <summary>
+    /// Called when the current player changes
+    /// </summary>
+    private void OnCurrentPlayerChanged(Player newPlayer)
+    {
+        // Unsubscribe from old player
+        UnsubscribeFromPlayerEvents();
+        
+        // Subscribe to new player
+        SubscribeToCurrentPlayerEvents();
+        
+        Debug.Log($"CardsManager: Current player changed to {newPlayer.PlayerName}");
+    }
+    
+    /// <summary>
+    /// Subscribe to current player's events
+    /// </summary>
+    private void SubscribeToCurrentPlayerEvents()
+    {
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        if (currentPlayerCtrl != null)
         {
-            player.OnMovementComplete += OnPlayerMovementComplete;
+            currentPlayerCtrl.OnMovementComplete += OnPlayerMovementComplete;
         }
     }
     
-    private void FindPlayer()
+    /// <summary>
+    /// Unsubscribe from player events
+    /// </summary>
+    private void UnsubscribeFromPlayerEvents()
     {
-        GameObject playerObj = GameObject.Find("Player");
-        if (playerObj != null)
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        if (currentPlayerCtrl != null)
         {
-            player = playerObj.GetComponent<PlayerController>();
-            if (player == null)
-            {
-                Debug.LogWarning("Player GameObject found but PlayerController component is missing!");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Player GameObject not found in scene!");
+            currentPlayerCtrl.OnMovementComplete -= OnPlayerMovementComplete;
         }
     }
+    
+    /// <summary>
+    /// Get the current player's PlayerController
+    /// </summary>
+    private PlayerController GetCurrentPlayerController()
+    {
+        if (playerManager != null && playerManager.CurrentPlayer != null)
+        {
+            return playerManager.CurrentPlayer.PlayerController;
+        }
+        
+        // Return null silently - this is expected during initialization
+        return null;
+    }
+    
     
     private void FindCardSpawnPoints()
     {
@@ -165,10 +205,13 @@ public class CardsManager : MonoBehaviour
     
     private void OnPlayerMovementComplete()
     {
+        // Get the current player's controller
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        
         // Get the current waypoint name from player
-        if (player != null)
+        if (currentPlayerCtrl != null)
         {
-            string waypointName = player.GetCurrentWaypointName();
+            string waypointName = currentPlayerCtrl.GetCurrentWaypointName();
             
             // Check if path contains "Stocks" keyword and activate minigame
             if (!string.IsNullOrEmpty(waypointName) && waypointName.Contains("Stocks", System.StringComparison.OrdinalIgnoreCase))
@@ -187,7 +230,7 @@ public class CardsManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Player reference is null! Cannot spawn card.");
+            Debug.LogWarning("Current player controller is null! Cannot spawn card.");
         }
     }
     
@@ -754,10 +797,13 @@ public class CardsManager : MonoBehaviour
     
     private void OnDestroy()
     {
-        // Unsubscribe from player movement complete event
-        if (player != null)
+        // Unsubscribe from player events
+        UnsubscribeFromPlayerEvents();
+        
+        // Unsubscribe from PlayerManager events
+        if (playerManager != null)
         {
-            player.OnMovementComplete -= OnPlayerMovementComplete;
+            playerManager.OnCurrentPlayerChanged -= OnCurrentPlayerChanged;
         }
         
         // Unsubscribe from RealEstateUI events

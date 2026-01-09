@@ -16,8 +16,8 @@ public class RealEstateUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI incomeText;
     
     [Header("References")]
-    [SerializeField] private PlayerFinance playerFinance;
     [SerializeField] private RealEstateData realEstateData;
+    [SerializeField] private PlayerManager playerManager; // Reference to PlayerManager
     
     private RealEstateData.RealEstateProperty currentProperty;
     private CardController currentCard;
@@ -73,19 +73,10 @@ public class RealEstateUI : MonoBehaviour
             noButton.onClick.AddListener(OnNoClicked);
         }
         
-        // Find PlayerFinance if not assigned
-        if (playerFinance == null)
+        // Find PlayerManager if not assigned
+        if (playerManager == null)
         {
-            GameObject playerObj = GameObject.Find("Player");
-            if (playerObj != null)
-            {
-                playerFinance = playerObj.GetComponent<PlayerFinance>();
-            }
-            
-            if (playerFinance == null)
-            {
-                playerFinance = FindAnyObjectByType<PlayerFinance>();
-            }
+            playerManager = FindAnyObjectByType<PlayerManager>();
         }
         
         // Load PlayerItem prefab
@@ -161,22 +152,23 @@ public class RealEstateUI : MonoBehaviour
             return;
         }
         
-        // Check if player has enough cash (using downpayment)
-        if (playerFinance == null)
+        // Get current player's finance
+        PlayerFinance currentPlayerFinance = GetCurrentPlayerFinance();
+        if (currentPlayerFinance == null)
         {
             Debug.LogError("PlayerFinance is null! Cannot purchase property.");
             return;
         }
         
         // Check if player has enough cash for the downpayment
-        if (playerFinance.CurrentCash < currentProperty.downpayment)
+        if (currentPlayerFinance.CurrentCash < currentProperty.downpayment)
         {
-            Debug.LogWarning($"Not enough cash! Need {currentProperty.downpayment}, have {playerFinance.CurrentCash}");
+            Debug.LogWarning($"Not enough cash! Need {currentProperty.downpayment}, have {currentPlayerFinance.CurrentCash}");
             return;
         }
         
         // Subtract the downpayment from player's cash
-        bool cashSubtracted = playerFinance.SubtractCash(currentProperty.downpayment);
+        bool cashSubtracted = currentPlayerFinance.SubtractCash(currentProperty.downpayment);
         if (!cashSubtracted)
         {
             Debug.LogWarning("Failed to subtract cash! Purchase cancelled.");
@@ -184,9 +176,10 @@ public class RealEstateUI : MonoBehaviour
         }
         
         // Spawn PlayerItem prefab at the path transform
+        GameObject playerItem = null;
         if (playerItemPrefab != null && targetPathTransform != null)
         {
-            GameObject playerItem = Instantiate(playerItemPrefab, targetPathTransform.position, targetPathTransform.rotation, targetPathTransform);
+            playerItem = Instantiate(playerItemPrefab, targetPathTransform.position, targetPathTransform.rotation, targetPathTransform);
             playerItem.name = $"PlayerItem_{propertyName}";
             Debug.Log($"Spawned PlayerItem at {targetPathTransform.name}");
         }
@@ -196,11 +189,17 @@ public class RealEstateUI : MonoBehaviour
         }
         
         // Add income item to PlayerFinance
-        if (playerFinance != null && !string.IsNullOrEmpty(propertyName))
+        if (currentPlayerFinance != null && !string.IsNullOrEmpty(propertyName))
         {
             // Add income item with property name as details and income amount
-            playerFinance.AddIncomeItem(propertyName, currentProperty.income);
+            currentPlayerFinance.AddIncomeItem(propertyName, currentProperty.income);
             Debug.Log($"Added income item: {propertyName} - {currentProperty.income}");
+        }
+        
+        // Add PlayerItem to current player's owned items
+        if (playerManager != null && playerManager.CurrentPlayer != null && playerItem != null)
+        {
+            playerManager.CurrentPlayer.AddPlayerItem(playerItem);
         }
         
         // Hide UI
@@ -250,5 +249,19 @@ public class RealEstateUI : MonoBehaviour
         {
             forSaleUIPanel.SetActive(false);
         }
+    }
+    
+    /// <summary>
+    /// Get the current player's PlayerFinance
+    /// </summary>
+    private PlayerFinance GetCurrentPlayerFinance()
+    {
+        if (playerManager != null && playerManager.CurrentPlayer != null)
+        {
+            return playerManager.CurrentPlayer.PlayerFinance;
+        }
+        
+        // Return null silently - this is expected during initialization
+        return null;
     }
 }

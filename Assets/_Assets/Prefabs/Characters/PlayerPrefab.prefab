@@ -9,11 +9,13 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2929397181292888531}
+  - component: {fileID: 3527894572754136765}
+  - component: {fileID: 13318698712118454}
   - component: {fileID: 8524865174168533033}
   - component: {fileID: 2262745029103600224}
   - component: {fileID: 1643505386277528714}
   m_Layer: 0
-  m_Name: PlayerModel
+  m_Name: PlayerPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -35,6 +37,42 @@ Transform:
   - {fileID: 4270542693774678645}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3527894572754136765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 98607575583157904}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8daa9f2d574d3c4aa0e5624eeaf0c0b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerID: 0
+  playerName: Raymond
+  isAI: 0
+  playerController: {fileID: 8524865174168533033}
+  playerFinance: {fileID: 2262745029103600224}
+  playerModel: {fileID: 3463219016571814095}
+  ownedPlayerItems:
+  - {fileID: 6088743746945635296, guid: 7aa2a0681dc12bc4ca55141bd5ff858f, type: 3}
+  aiController: {fileID: 13318698712118454}
+--- !u!114 &13318698712118454
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 98607575583157904}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ff71fdc413bc9e4cbd3d6990d08c828, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  decisionDelayMin: 0.5
+  decisionDelayMax: 2
+  purchaseProbability: 0.6
 --- !u!114 &8524865174168533033
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -129,6 +167,8 @@ MonoBehaviour:
     amount: 400
   - details: Entertainment
     amount: 100
+  currentPaydayDisplay: 0
+  currentCashDisplay: 0
   initialCash: 6600
 --- !u!114 &1643505386277528714
 MonoBehaviour:
@@ -142,9 +182,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f9fb460987241a9419623534b49f3d04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  currentText: {fileID: 0}
+  cashText: {fileID: 0}
   playerFinance: {fileID: 2262745029103600224}
-  paydayFormat: ${0:F0}
+  cashFormat: ${0:F0}
 --- !u!1001 &4381644586564009374
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -218,6 +258,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a52a9c979a3df764e81af1f72787a3f2, type: 3}
+--- !u!1 &3463219016571814095 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: a52a9c979a3df764e81af1f72787a3f2, type: 3}
+  m_PrefabInstance: {fileID: 4381644586564009374}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &4270542693774678645 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: a52a9c979a3df764e81af1f72787a3f2, type: 3}

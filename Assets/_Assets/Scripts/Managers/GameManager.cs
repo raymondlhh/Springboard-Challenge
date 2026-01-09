@@ -20,17 +20,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private bool IsDebugging = false; // Enable debug mode to use fixed movement steps
     [SerializeField] private int debugFixedSteps = 1; // Fixed number of steps to move when IsDebugging is true
     
-    [Header("Player Reference")]
-    [SerializeField] private PlayerController player;
+    [Header("Player Manager Reference")]
+    [SerializeField] private PlayerManager playerManager;
     
     [Header("Card Manager Reference")]
     [SerializeField] private CardsManager cardsManager;
     
     [Header("UI References")]
     [SerializeField] private GameObject miniGamesUI;
-    
-    [Header("Player Finance Reference")]
-    [SerializeField] private PlayerFinance playerFinance;
     
     private int diceSum = 0;
     private bool isRolling = false;
@@ -40,7 +37,7 @@ public class GameManager : MonoBehaviour
     
     public int DiceSum => diceSum;
     public bool IsRolling => isRolling;
-    public bool CanRollDice => !isRolling && !isProcessingDiceResult && (cardsManager == null || !cardsManager.IsCardAnimating) && (player == null || !player.IsMoving) && !IsMiniGameActive();
+    public bool CanRollDice => !isRolling && !isProcessingDiceResult && (cardsManager == null || !cardsManager.IsCardAnimating) && (GetCurrentPlayerController() == null || !GetCurrentPlayerController().IsMoving) && !IsMiniGameActive();
     
     // Display current dice values
     public int FirstDiceValue => firstDice != null ? firstDice.CurrentValue : 0;
@@ -61,14 +58,20 @@ public class GameManager : MonoBehaviour
             LoadDicePrefab();
         }
         
+        // Find PlayerManager if not assigned
+        if (playerManager == null)
+        {
+            playerManager = FindAnyObjectByType<PlayerManager>();
+        }
+        
+        // Subscribe to PlayerManager events
+        if (playerManager != null)
+        {
+            playerManager.OnCurrentPlayerChanged += OnCurrentPlayerChanged;
+        }
+        
         // Always spawn dice at start (remove any existing dice first)
         SpawnDice();
-        
-        // Find player if not assigned
-        if (player == null)
-        {
-            FindPlayer();
-        }
         
         // Find CardsManager if not assigned
         if (cardsManager == null)
@@ -79,27 +82,8 @@ public class GameManager : MonoBehaviour
         // Find KeyboardManager to check MiniGameStockMarket status
         keyboardManager = FindAnyObjectByType<StockManager>();
         
-        // Find PlayerFinance if not assigned
-        if (playerFinance == null)
-        {
-            GameObject playerObj = GameObject.Find("Player");
-            if (playerObj != null)
-            {
-                playerFinance = playerObj.GetComponent<PlayerFinance>();
-            }
-            
-            if (playerFinance == null)
-            {
-                playerFinance = FindAnyObjectByType<PlayerFinance>();
-            }
-        }
-        
-        // Subscribe to player movement complete event
-        if (player != null)
-        {
-            player.OnMovementComplete += OnPlayerMovementComplete;
-            player.OnPassedPath01Start += OnPlayerPassedPath01Start;
-        }
+        // Subscribe to current player's movement complete event
+        SubscribeToCurrentPlayerEvents();
         
         // Find and hide MiniGamesUI at start
         if (miniGamesUI == null)
@@ -149,27 +133,36 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         // Handle input for web (mouse click) and mobile (touch)
-        // Only allow rolling if dice are not rolling, player is not moving, and card is not animating
-        if (Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began))
+        // Only allow rolling if it's a human player's turn
+        if ((Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)))
         {
-            if (!CanRollDice)
+            // Check if it's a human player's turn
+            bool isHumanTurn = playerManager == null || playerManager.IsHumanPlayerTurn();
+            
+            if (isHumanTurn && !CanRollDice)
             {
                 // Debug why dice cannot be rolled
                 if (isRolling)
                     Debug.Log("Cannot roll dice: Dice are currently rolling");
                 else if (cardsManager != null && cardsManager.IsCardAnimating)
                     Debug.Log("Cannot roll dice: Card is animating");
-                else if (player != null && player.IsMoving)
+                else if (GetCurrentPlayerController() != null && GetCurrentPlayerController().IsMoving)
                     Debug.Log("Cannot roll dice: Player is moving");
                 else if (IsMiniGameActive())
                     Debug.Log("Cannot roll dice: Mini game is active");
                 else
                     Debug.Log("Cannot roll dice: Unknown reason");
             }
-            else if (CanRollDice)
+            else if (isHumanTurn && CanRollDice)
             {
                 RollDice();
             }
+        }
+        
+        // Auto-roll for AI players
+        if (playerManager != null && playerManager.IsAIPlayerTurn() && CanRollDice && !isRolling)
+        {
+            StartCoroutine(AutoRollForAI());
         }
         
         // Check if dice have finished rolling
@@ -178,7 +171,8 @@ public class GameManager : MonoBehaviour
             lastCheckTime = Time.time;
             
             // Check if we're using one dice mode
-            bool useOneDice = player != null && player.ShouldUseOneDice;
+            PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+            bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
             
             bool diceFinished = useOneDice 
                 ? !firstDice.IsRolling 
@@ -189,6 +183,89 @@ public class GameManager : MonoBehaviour
                 isRolling = false;
                 StartCoroutine(ProcessDiceResult());
             }
+        }
+    }
+    
+    /// <summary>
+    /// Auto-roll dice for AI players
+    /// </summary>
+    private IEnumerator AutoRollForAI()
+    {
+        if (playerManager == null || playerManager.CurrentPlayer == null || playerManager.CurrentPlayer.AIController == null)
+        {
+            yield break;
+        }
+        
+        yield return StartCoroutine(playerManager.CurrentPlayer.AIController.RollDice(() => {
+            RollDice();
+        }));
+    }
+    
+    /// <summary>
+    /// Get the current player's PlayerController
+    /// </summary>
+    private PlayerController GetCurrentPlayerController()
+    {
+        if (playerManager != null && playerManager.CurrentPlayer != null)
+        {
+            return playerManager.CurrentPlayer.PlayerController;
+        }
+        
+        // Return null silently - this is expected during initialization
+        return null;
+    }
+    
+    /// <summary>
+    /// Get the current player's PlayerFinance
+    /// </summary>
+    private PlayerFinance GetCurrentPlayerFinance()
+    {
+        if (playerManager != null && playerManager.CurrentPlayer != null)
+        {
+            return playerManager.CurrentPlayer.PlayerFinance;
+        }
+        
+        // Return null silently - this is expected during initialization
+        return null;
+    }
+    
+    /// <summary>
+    /// Called when the current player changes
+    /// </summary>
+    private void OnCurrentPlayerChanged(Player newPlayer)
+    {
+        // Unsubscribe from old player
+        UnsubscribeFromPlayerEvents();
+        
+        // Subscribe to new player
+        SubscribeToCurrentPlayerEvents();
+        
+        Debug.Log($"GameManager: Current player changed to {newPlayer.PlayerName}");
+    }
+    
+    /// <summary>
+    /// Subscribe to current player's events
+    /// </summary>
+    private void SubscribeToCurrentPlayerEvents()
+    {
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        if (currentPlayerCtrl != null)
+        {
+            currentPlayerCtrl.OnMovementComplete += OnPlayerMovementComplete;
+            currentPlayerCtrl.OnPassedPath01Start += OnPlayerPassedPath01Start;
+        }
+    }
+    
+    /// <summary>
+    /// Unsubscribe from player events
+    /// </summary>
+    private void UnsubscribeFromPlayerEvents()
+    {
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        if (currentPlayerCtrl != null)
+        {
+            currentPlayerCtrl.OnMovementComplete -= OnPlayerMovementComplete;
+            currentPlayerCtrl.OnPassedPath01Start -= OnPlayerPassedPath01Start;
         }
     }
     
@@ -246,8 +323,9 @@ public class GameManager : MonoBehaviour
     
     public void SpawnDice()
     {
-        // Check if player should use one dice (after stopping on Fortune Road)
-        bool useOneDice = player != null && player.ShouldUseOneDice;
+        // Check if current player should use one dice (after stopping on Fortune Road)
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
         
         if (useOneDice && oneDiceSpawner != null)
         {
@@ -403,7 +481,8 @@ public class GameManager : MonoBehaviour
     public void RollDice()
     {
         // Check if we should use one dice
-        bool useOneDice = player != null && player.ShouldUseOneDice;
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
         
         if (isRolling || firstDice == null)
         {
@@ -447,7 +526,8 @@ public class GameManager : MonoBehaviour
         isProcessingDiceResult = true;
         
         // Check if we're using one dice mode
-        bool useOneDice = player != null && player.ShouldUseOneDice;
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
         
         if (firstDice != null)
         {
@@ -515,11 +595,10 @@ public class GameManager : MonoBehaviour
             }
             
             // Clear one dice flag immediately after using it, so next roll will be two dice
-            if (useOneDice && player != null)
+            if (useOneDice && currentPlayerCtrl != null)
             {
                 // Clear the flag through a public method or directly if accessible
-                // We'll need to add a method to PlayerController to clear this flag
-                player.ClearOneDiceFlag();
+                currentPlayerCtrl.ClearOneDiceFlag();
                 Debug.Log("One dice flag cleared. Next roll will use two dice.");
             }
             
@@ -529,14 +608,14 @@ public class GameManager : MonoBehaviour
                 Debug.Log($"DEBUG MODE: Using fixed steps ({debugFixedSteps}) instead of dice sum ({diceSum})");
             }
             
-            // Move player based on calculated movement steps
-            if (player != null && movementSteps > 0)
+            // Move current player based on calculated movement steps
+            if (currentPlayerCtrl != null && movementSteps > 0)
             {
-                player.OnDiceRollComplete(movementSteps);
+                currentPlayerCtrl.OnDiceRollComplete(movementSteps);
             }
-            else if (player == null)
+            else
             {
-                Debug.LogWarning("Player not found! Cannot move player.");
+                Debug.LogWarning("Current player not found! Cannot move player.");
                 isProcessingDiceResult = false;
             }
             // Note: isProcessingDiceResult will be set to false in OnPlayerMovementComplete
@@ -553,7 +632,8 @@ public class GameManager : MonoBehaviour
         float elapsedTime = 0f;
         
         // Check if we're using one dice mode
-        bool useOneDice = player != null && player.ShouldUseOneDice;
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
         
         if (firstDice == null)
         {
@@ -663,10 +743,11 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void OnPlayerPassedPath01Start()
     {
-        if (playerFinance != null)
+        PlayerFinance currentPlayerFinance = GetCurrentPlayerFinance();
+        if (currentPlayerFinance != null)
         {
-            playerFinance.AddPaydayToCash();
-            Debug.Log($"Player passed through Path01_Start! Added CurrentPayday ({playerFinance.CurrentPayday}) to cash. New Cash: {playerFinance.CurrentCash}");
+            currentPlayerFinance.AddPaydayToCash();
+            Debug.Log($"Player passed through Path01_Start! Added CurrentPayday ({currentPlayerFinance.CurrentPayday}) to cash. New Cash: {currentPlayerFinance.CurrentCash}");
         }
         else
         {
@@ -677,7 +758,8 @@ public class GameManager : MonoBehaviour
     private void OnPlayerMovementComplete()
     {
         // Get the current waypoint name to check if a card will be shown
-        string currentWaypointName = player != null ? player.GetCurrentWaypointName() : string.Empty;
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        string currentWaypointName = currentPlayerCtrl != null ? currentPlayerCtrl.GetCurrentWaypointName() : string.Empty;
         
         bool willShowCard = false;
         
@@ -693,14 +775,28 @@ public class GameManager : MonoBehaviour
         // If a card will be shown or is currently animating, wait for it to be destroyed before spawning dice
         if (willShowCard || isCardAnimating)
         {
-            // Wait for card to be destroyed, then spawn dice
+            // Wait for card to be destroyed, then spawn dice and switch to next player
             StartCoroutine(WaitForCardAndRespawnDice());
         }
         else
         {
-            // No card on this path, spawn dice immediately
+            // No card on this path, spawn dice immediately and switch to next player
             SpawnDice();
             isProcessingDiceResult = false;
+            
+            // Switch to next player's turn
+            SwitchToNextPlayer();
+        }
+    }
+    
+    /// <summary>
+    /// Switch to the next player's turn
+    /// </summary>
+    private void SwitchToNextPlayer()
+    {
+        if (playerManager != null)
+        {
+            playerManager.NextPlayer();
         }
     }
     
@@ -728,24 +824,11 @@ public class GameManager : MonoBehaviour
         // Card has been destroyed, spawn dice back
         SpawnDice();
         isProcessingDiceResult = false;
+        
+        // Switch to next player's turn
+        SwitchToNextPlayer();
     }
     
-    private void FindPlayer()
-    {
-        GameObject playerObj = GameObject.Find("Player");
-        if (playerObj != null)
-        {
-            player = playerObj.GetComponent<PlayerController>();
-            if (player == null)
-            {
-                player = playerObj.AddComponent<PlayerController>();
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Player GameObject not found in scene!");
-        }
-    }
     
     
     /// <summary>
@@ -753,7 +836,8 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void DisplayDiceSum()
     {
-        bool useOneDice = player != null && player.ShouldUseOneDice;
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
         
         if (firstDice != null)
         {
@@ -801,11 +885,13 @@ public class GameManager : MonoBehaviour
     
     private void OnDestroy()
     {
-        // Unsubscribe from player movement complete event
-        if (player != null)
+        // Unsubscribe from player events
+        UnsubscribeFromPlayerEvents();
+        
+        // Unsubscribe from PlayerManager events
+        if (playerManager != null)
         {
-            player.OnMovementComplete -= OnPlayerMovementComplete;
-            player.OnPassedPath01Start -= OnPlayerPassedPath01Start;
+            playerManager.OnCurrentPlayerChanged -= OnCurrentPlayerChanged;
         }
     }
 }
