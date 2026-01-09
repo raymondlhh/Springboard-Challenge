@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c7359340f55673438fcca9e4e798f0c, type: 3}
+  m_Name: BusinessData
+  m_EditorClassIdentifier: 
+  properties:
+  - businessName: Business01
+    displayName: Business01
+    capital: 5000
+    cashFlow: 450
+    incomePerVisit: 150
+  - businessName: Business02
+    displayName: Business02
+    capital: 10000
+    cashFlow: 500
+    incomePerVisit: 150
+  - businessName: Business03
+    displayName: Business03
+    capital: 7000
+    cashFlow: 700
+    incomePerVisit: 200
+  - businessName: Business04
+    displayName: Business04
+    capital: 5000
+    cashFlow: 1000
+    incomePerVisit: 200
+  - businessName: Business05
+    displayName: Business05
+    capital: 8000
+    cashFlow: 1300
+    incomePerVisit: 200
+  - businessName: Business06
+    displayName: Business06
+    capital: 10000
+    cashFlow: 1500
+    incomePerVisit: 300

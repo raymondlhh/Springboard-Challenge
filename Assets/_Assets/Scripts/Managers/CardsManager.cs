@@ -33,9 +33,15 @@ public class CardsManager : MonoBehaviour
     [SerializeField] private RealEstateData realEstateData;
     [SerializeField] private RealEstateUI forSaleUIController;
     
+    [Header("Business Settings")]
+    [SerializeField] private BusinessData businessData;
+    [SerializeField] private BusinessUI businessUIController;
+    
     private bool isCardAnimating = false;
     private CardController currentRealEstateCard;
     private string currentRealEstatePathName;
+    private CardController currentBusinessCard;
+    private string currentBusinessPathName;
     
     public bool IsCardAnimating => isCardAnimating;
     
@@ -93,6 +99,28 @@ public class CardsManager : MonoBehaviour
         {
             forSaleUIController.OnPurchaseComplete += OnRealEstatePurchaseComplete;
             forSaleUIController.OnPurchaseCancelled += OnRealEstatePurchaseCancelled;
+        }
+        
+        // Find BusinessUIController if not assigned
+        if (businessUIController == null)
+        {
+            GameObject businessUIObj = GameObject.Find("BusinessUI");
+            if (businessUIObj != null)
+            {
+                businessUIController = businessUIObj.GetComponent<BusinessUI>();
+            }
+            
+            if (businessUIController == null)
+            {
+                businessUIController = FindAnyObjectByType<BusinessUI>();
+            }
+        }
+        
+        // Subscribe to BusinessUI events
+        if (businessUIController != null)
+        {
+            businessUIController.OnPurchaseComplete += OnBusinessPurchaseComplete;
+            businessUIController.OnPurchaseCancelled += OnBusinessPurchaseCancelled;
         }
         
         // Subscribe to player movement complete event
@@ -200,9 +228,10 @@ public class CardsManager : MonoBehaviour
             cardController = spawnedCard.AddComponent<CardController>();
         }
         
-        // Check if this is a RealEstate path
+        // Check if this is a RealEstate or Business path
         bool isRealEstatePath = IsRealEstatePath(pathName);
-        bool waitForInput = isRealEstatePath;
+        bool isBusinessPath = IsBusinessPath(pathName);
+        bool waitForInput = isRealEstatePath || isBusinessPath;
         
         // If it's a RealEstate path, subscribe to card reached end event
         if (isRealEstatePath)
@@ -212,6 +241,14 @@ public class CardsManager : MonoBehaviour
             cardController.OnCardReachedEnd += OnRealEstateCardReachedEnd;
         }
         
+        // If it's a Business path, subscribe to card reached end event
+        if (isBusinessPath)
+        {
+            currentBusinessCard = cardController;
+            currentBusinessPathName = pathName;
+            cardController.OnCardReachedEnd += OnBusinessCardReachedEnd;
+        }
+        
         // Start card animation with the configured speed and wait duration
         // Convert speed to duration: higher speed = lower duration (faster movement)
         // Base duration of 2 seconds divided by speed
@@ -219,8 +256,8 @@ public class CardsManager : MonoBehaviour
         isCardAnimating = true;
         cardController.AnimateCard(cardsStartPath, cardsEndPath, moveDuration, cardWaitDuration, waitForInput);
         
-        // Monitor when card animation completes (only for non-RealEstate cards)
-        if (!isRealEstatePath)
+        // Monitor when card animation completes (only for non-RealEstate and non-Business cards)
+        if (!isRealEstatePath && !isBusinessPath)
         {
             StartCoroutine(WaitForCardAnimation(cardController));
         }
@@ -483,6 +520,22 @@ public class CardsManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Checks if the path name is a Business path (e.g., "PathXX_BusinessXX")
+    /// </summary>
+    private bool IsBusinessPath(string pathName)
+    {
+        if (string.IsNullOrEmpty(pathName))
+        {
+            return false;
+        }
+        
+        string categoryName = ExtractCategoryFromPath(pathName);
+        // Check if it starts with "Business" and has digits at the end (e.g., "Business01", "Business02")
+        return categoryName.StartsWith("Business", System.StringComparison.OrdinalIgnoreCase) &&
+               System.Text.RegularExpressions.Regex.IsMatch(categoryName, @"Business\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+    
+    /// <summary>
     /// Called when a RealEstate card reaches the end path
     /// </summary>
     private void OnRealEstateCardReachedEnd(CardController cardController)
@@ -603,6 +656,102 @@ public class CardsManager : MonoBehaviour
         Debug.Log("RealEstate purchase cancelled. Card destroyed and dice spawned.");
     }
     
+    /// <summary>
+    /// Called when a Business card reaches the end path
+    /// </summary>
+    private void OnBusinessCardReachedEnd(CardController cardController)
+    {
+        if (string.IsNullOrEmpty(currentBusinessPathName))
+        {
+            Debug.LogError("Business path name is empty!");
+            return;
+        }
+        
+        // Extract business name from path (e.g., "Path02_Business01" -> "Business01")
+        string categoryName = ExtractCategoryFromPath(currentBusinessPathName);
+        
+        // Get business data
+        if (businessData == null)
+        {
+            Debug.LogError("BusinessData is not assigned! Cannot show BusinessUI.");
+            return;
+        }
+        
+        BusinessData.BusinessProperty business = businessData.GetBusinessByName(categoryName);
+        if (business == null)
+        {
+            Debug.LogWarning($"Business data not found for: {categoryName}");
+            return;
+        }
+        
+        // Find the path transform to spawn PlayerItem
+        Transform pathTransform = FindPathTransform(currentBusinessPathName);
+        if (pathTransform == null)
+        {
+            Debug.LogWarning($"Path transform not found for: {currentBusinessPathName}");
+        }
+        
+        // Show BusinessUI
+        if (businessUIController != null)
+        {
+            businessUIController.ShowBusinessUI(business, cardController, pathTransform, categoryName);
+        }
+        else
+        {
+            Debug.LogError("BusinessUIController is not assigned! Cannot show BusinessUI.");
+        }
+    }
+    
+    /// <summary>
+    /// Called when player completes a Business purchase
+    /// </summary>
+    private void OnBusinessPurchaseComplete()
+    {
+        // Destroy the card
+        if (currentBusinessCard != null)
+        {
+            currentBusinessCard.DestroyCard();
+            currentBusinessCard = null;
+        }
+        
+        // Card has been destroyed, allow dice rolling again
+        isCardAnimating = false;
+        
+        // Spawn dice
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null)
+        {
+            gameManager.SpawnDice();
+        }
+        
+        Debug.Log("Business purchase complete. Card destroyed and dice spawned.");
+    }
+    
+    /// <summary>
+    /// Called when player cancels a Business purchase
+    /// </summary>
+    private void OnBusinessPurchaseCancelled()
+    {
+        // Destroy the card
+        if (currentBusinessCard != null)
+        {
+            currentBusinessCard.DestroyCard();
+            currentBusinessCard = null;
+        }
+        
+        // Card has been destroyed, allow dice rolling again
+        isCardAnimating = false;
+        
+        // Spawn dice
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null)
+        {
+            gameManager.SpawnDice();
+        }
+        
+        Debug.Log("Business purchase cancelled. Card destroyed and dice spawned.");
+    }
+    
     private void OnDestroy()
     {
         // Unsubscribe from player movement complete event
@@ -618,10 +767,22 @@ public class CardsManager : MonoBehaviour
             forSaleUIController.OnPurchaseCancelled -= OnRealEstatePurchaseCancelled;
         }
         
+        // Unsubscribe from BusinessUI events
+        if (businessUIController != null)
+        {
+            businessUIController.OnPurchaseComplete -= OnBusinessPurchaseComplete;
+            businessUIController.OnPurchaseCancelled -= OnBusinessPurchaseCancelled;
+        }
+        
         // Unsubscribe from card events
         if (currentRealEstateCard != null)
         {
             currentRealEstateCard.OnCardReachedEnd -= OnRealEstateCardReachedEnd;
+        }
+        
+        if (currentBusinessCard != null)
+        {
+            currentBusinessCard.OnCardReachedEnd -= OnBusinessCardReachedEnd;
         }
     }
 }
