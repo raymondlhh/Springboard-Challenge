@@ -499,7 +499,46 @@ public class CardsManager : MonoBehaviour
                 return;
             }
             
-            // PRIORITY 3: Only spawn card if one should be spawned for this path
+            // PRIORITY 3: Check if this is a Real Estate or Business path that's already owned
+            bool isRealEstatePath = IsRealEstatePath(waypointName);
+            bool isBusinessPath = IsBusinessPath(waypointName);
+            
+            if (isRealEstatePath || isBusinessPath)
+            {
+                // Check if property is already owned
+                Player propertyOwner = null;
+                if (playerManager != null)
+                {
+                    propertyOwner = playerManager.FindPropertyOwner(waypointName);
+                }
+                
+                if (propertyOwner != null)
+                {
+                    // Property is owned - check if visitor is different from owner
+                    Player currentPlayer = playerManager?.CurrentPlayer;
+                    if (currentPlayer != null && currentPlayer != propertyOwner)
+                    {
+                        // Other player visiting owned property - handle visit instead of spawning card
+                        Debug.Log($"[CardsManager] Property at path '{waypointName}' is owned by {propertyOwner.PlayerName}. Handling visit instead of spawning card. (Visitor: {playerName})");
+                        HandlePropertyVisit(waypointName, isRealEstatePath, isBusinessPath, propertyOwner);
+                        return;
+                    }
+                    else if (currentPlayer == propertyOwner)
+                    {
+                        // Owner visiting their own property - no card spawn, no income (they already have the monthly income)
+                        Debug.Log($"[CardsManager] Property at path '{waypointName}' is owned by current player {playerName}. No card spawn, no visit income.");
+                        // Spawn dice
+                        GameManager gameManager = FindAnyObjectByType<GameManager>();
+                        if (gameManager != null)
+                        {
+                            gameManager.SpawnDice();
+                        }
+                        return;
+                    }
+                }
+            }
+            
+            // PRIORITY 4: Only spawn card if one should be spawned for this path
             bool willSpawn = WillSpawnCardForPath(waypointName);
             if (willSpawn)
             {
@@ -927,6 +966,119 @@ public class CardsManager : MonoBehaviour
         // Card has been destroyed, allow dice rolling again
         isCardAnimating = false;
         Debug.Log("Card animation complete. Dice rolling enabled again.");
+    }
+    
+    /// <summary>
+    /// Handles when a player visits an owned Real Estate or Business property
+    /// Visitor pays the owner, and owner receives income
+    /// </summary>
+    private void HandlePropertyVisit(string pathName, bool isRealEstate, bool isBusiness, Player propertyOwner)
+    {
+        if (propertyOwner == null || propertyOwner.PlayerFinance == null)
+        {
+            Debug.LogWarning($"[CardsManager] Cannot handle property visit: Property owner or finance is null.");
+            return;
+        }
+        
+        // Get the current visiting player
+        Player visitingPlayer = playerManager?.CurrentPlayer;
+        if (visitingPlayer == null || visitingPlayer.PlayerFinance == null)
+        {
+            Debug.LogWarning($"[CardsManager] Cannot handle property visit: Visiting player or finance is null.");
+            return;
+        }
+        
+        // Extract property name from path (e.g., "Path11_RealEstate03" -> "RealEstate03")
+        string categoryName = ExtractCategoryFromPath(pathName);
+        if (string.IsNullOrEmpty(categoryName))
+        {
+            Debug.LogWarning($"[CardsManager] Cannot extract property name from path: {pathName}");
+            return;
+        }
+        
+        float paymentAmount = 0f;
+        
+        if (isRealEstate)
+        {
+            // For Real Estate: add incomePerVisit to owner's investment income
+            if (realEstateData == null)
+            {
+                Debug.LogWarning($"[CardsManager] RealEstateData is null! Cannot get income per visit.");
+                return;
+            }
+            
+            RealEstateData.RealEstateProperty property = realEstateData.GetPropertyByName(categoryName);
+            if (property == null)
+            {
+                Debug.LogWarning($"[CardsManager] Property data not found for: {categoryName}");
+                return;
+            }
+            
+            paymentAmount = property.incomePerVisit;
+            
+            // Visitor pays the owner
+            if (paymentAmount > 0)
+            {
+                bool paymentSuccessful = visitingPlayer.PlayerFinance.SubtractCash(paymentAmount);
+                if (paymentSuccessful)
+                {
+                    // Add income per visit to owner's investment income
+                    propertyOwner.PlayerFinance.AddInvestmentIncomeItem(categoryName, paymentAmount);
+                    Debug.Log($"[CardsManager] {visitingPlayer.PlayerName} paid {paymentAmount} to {propertyOwner.PlayerName} for visiting {categoryName}. Owner received investment income.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[CardsManager] {visitingPlayer.PlayerName} doesn't have enough cash ({visitingPlayer.PlayerFinance.CurrentCash}) to pay {paymentAmount} for visiting {categoryName}.");
+                    // Still add income to owner even if visitor can't pay (visitor goes into debt or payment is waived)
+                    propertyOwner.PlayerFinance.AddInvestmentIncomeItem(categoryName, paymentAmount);
+                    Debug.Log($"[CardsManager] Owner still received {paymentAmount} investment income for {categoryName} visit (visitor couldn't pay).");
+                }
+            }
+        }
+        else if (isBusiness)
+        {
+            // For Business: add incomePerVisit to owner's investment income
+            if (businessData == null)
+            {
+                Debug.LogWarning($"[CardsManager] BusinessData is null! Cannot get income per visit.");
+                return;
+            }
+            
+            BusinessData.BusinessProperty business = businessData.GetBusinessByName(categoryName);
+            if (business == null)
+            {
+                Debug.LogWarning($"[CardsManager] Business data not found for: {categoryName}");
+                return;
+            }
+            
+            paymentAmount = business.incomePerVisit;
+            
+            // Visitor pays the owner
+            if (paymentAmount > 0)
+            {
+                bool paymentSuccessful = visitingPlayer.PlayerFinance.SubtractCash(paymentAmount);
+                if (paymentSuccessful)
+                {
+                    // Add income per visit to owner's investment income
+                    propertyOwner.PlayerFinance.AddInvestmentIncomeItem(categoryName, paymentAmount);
+                    Debug.Log($"[CardsManager] {visitingPlayer.PlayerName} paid {paymentAmount} to {propertyOwner.PlayerName} for visiting {categoryName}. Owner received investment income.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[CardsManager] {visitingPlayer.PlayerName} doesn't have enough cash ({visitingPlayer.PlayerFinance.CurrentCash}) to pay {paymentAmount} for visiting {categoryName}.");
+                    // Still add income to owner even if visitor can't pay (visitor goes into debt or payment is waived)
+                    propertyOwner.PlayerFinance.AddInvestmentIncomeItem(categoryName, paymentAmount);
+                    Debug.Log($"[CardsManager] Owner still received {paymentAmount} investment income for {categoryName} visit (visitor couldn't pay).");
+                }
+            }
+        }
+        
+        // Spawn dice after handling the visit
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null)
+        {
+            gameManager.SpawnDice();
+        }
     }
     
     /// <summary>

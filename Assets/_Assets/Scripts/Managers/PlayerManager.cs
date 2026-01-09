@@ -424,6 +424,86 @@ public class PlayerManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Finds which player owns a property by path name (e.g., "Path11_RealEstate03" -> finds owner of "RealEstate03")
+    /// Returns null if property is not owned by any player
+    /// </summary>
+    public Player FindPropertyOwner(string pathName)
+    {
+        if (string.IsNullOrEmpty(pathName))
+        {
+            return null;
+        }
+        
+        // Extract property name from path (e.g., "Path11_RealEstate03" -> "RealEstate03")
+        string propertyName = ExtractPropertyNameFromPath(pathName);
+        if (string.IsNullOrEmpty(propertyName))
+        {
+            return null;
+        }
+        
+        // Search through all players' owned items
+        foreach (var player in players)
+        {
+            if (player == null || player.OwnedPlayerItems == null)
+            {
+                continue;
+            }
+            
+            // Check each owned item
+            foreach (var item in player.OwnedPlayerItems)
+            {
+                if (item != null)
+                {
+                    // PlayerItem names are like "PlayerItem_RealEstate02" or "PlayerItem_Business01"
+                    string itemName = item.name;
+                    if (itemName.Contains(propertyName, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        Debug.Log($"Found property owner: {player.PlayerName} owns {propertyName} (path: {pathName})");
+                        return player;
+                    }
+                }
+            }
+        }
+        
+        return null; // Property is not owned
+    }
+    
+    /// <summary>
+    /// Extracts property name from path format "PathXX_Category" -> "Category"
+    /// </summary>
+    private string ExtractPropertyNameFromPath(string pathName)
+    {
+        if (string.IsNullOrEmpty(pathName))
+        {
+            return null;
+        }
+        
+        // Check if path follows the pattern "PathXX_Category" where XX is digits
+        int underscoreIndex = pathName.IndexOf('_');
+        
+        if (underscoreIndex > 0 && underscoreIndex < pathName.Length - 1)
+        {
+            string prefix = pathName.Substring(0, underscoreIndex);
+            
+            // Check if prefix starts with "Path" followed by digits
+            if (prefix.StartsWith("Path", System.StringComparison.OrdinalIgnoreCase))
+            {
+                string numberPart = prefix.Substring(4); // Skip "Path"
+                
+                // Check if the remaining part is all digits
+                if (numberPart.Length > 0 && System.Text.RegularExpressions.Regex.IsMatch(numberPart, @"^\d+$"))
+                {
+                    // Extract everything after the underscore
+                    return pathName.Substring(underscoreIndex + 1);
+                }
+            }
+        }
+        
+        // If path doesn't match the pattern, return the original name
+        return pathName;
+    }
+    
+    /// <summary>
     /// Automatically assign path waypoints and Fortune Road waypoints to a player
     /// </summary>
     private void AssignWaypointsToPlayer(Player player)

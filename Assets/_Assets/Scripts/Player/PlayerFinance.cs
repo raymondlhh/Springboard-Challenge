@@ -20,6 +20,10 @@ public class PlayerFinance : MonoBehaviour
     [Header("Income Items")]
     [SerializeField] private List<FinancialItem> incomeItems = new List<FinancialItem>();
     
+    [Header("Investment Income Items")]
+    [Tooltip("Income from Real Estate properties when other players visit them")]
+    [SerializeField] private List<FinancialItem> investmentIncomeItems = new List<FinancialItem>();
+    
     [Header("Expense Items")]
     [SerializeField] private List<FinancialItem> expenseItems = new List<FinancialItem>();
     
@@ -43,12 +47,17 @@ public class PlayerFinance : MonoBehaviour
         get { return incomeItems != null ? incomeItems.Sum(item => item.amount) : 0f; }
     }
     
+    public float TotalInvestmentIncome 
+    { 
+        get { return investmentIncomeItems != null ? investmentIncomeItems.Sum(item => item.amount) : 0f; }
+    }
+    
     public float TotalExpenses 
     { 
         get { return expenseItems != null ? expenseItems.Sum(item => item.amount) : 0f; }
     }
     
-    public float CurrentPayday => TotalIncome - TotalExpenses;
+    public float CurrentPayday => TotalIncome + TotalInvestmentIncome - TotalExpenses;
     
     public float CurrentCash => currentCash;
     
@@ -58,12 +67,14 @@ public class PlayerFinance : MonoBehaviour
     
     // Read-only access to income and expense lists
     public IReadOnlyList<FinancialItem> IncomeItems => incomeItems;
+    public IReadOnlyList<FinancialItem> InvestmentIncomeItems => investmentIncomeItems;
     public IReadOnlyList<FinancialItem> ExpenseItems => expenseItems;
     
     void Start()
     {
         // Initialize with default values if needed
         if (incomeItems == null) incomeItems = new List<FinancialItem>();
+        if (investmentIncomeItems == null) investmentIncomeItems = new List<FinancialItem>();
         if (expenseItems == null) expenseItems = new List<FinancialItem>();
         
         // Initialize cash with initial value
@@ -110,6 +121,37 @@ public class PlayerFinance : MonoBehaviour
             UpdateCurrentPaydayDisplay();
             OnPaydayChanged?.Invoke(CurrentPayday);
         }
+    }
+    
+    /// <summary>
+    /// Adds an investment income item with details and amount (for Real Estate visits)
+    /// </summary>
+    public void AddInvestmentIncomeItem(string details, float amount)
+    {
+        if (!string.IsNullOrEmpty(details) && amount > 0)
+        {
+            investmentIncomeItems.Add(new FinancialItem(details, amount));
+            Debug.Log($"Investment income item added: {details} - {amount}. Total Investment Income: {TotalInvestmentIncome}");
+            UpdateCurrentPaydayDisplay();
+            OnPaydayChanged?.Invoke(CurrentPayday);
+        }
+    }
+    
+    /// <summary>
+    /// Removes an investment income item by details (removes first matching item)
+    /// </summary>
+    public bool RemoveInvestmentIncomeItem(string details)
+    {
+        var item = investmentIncomeItems.FirstOrDefault(i => i.details == details);
+        if (item != null)
+        {
+            investmentIncomeItems.Remove(item);
+            Debug.Log($"Investment income item removed: {details}. Total Investment Income: {TotalInvestmentIncome}");
+            UpdateCurrentPaydayDisplay();
+            OnPaydayChanged?.Invoke(CurrentPayday);
+            return true;
+        }
+        return false;
     }
     
     /// <summary>
@@ -284,6 +326,7 @@ public class PlayerFinance : MonoBehaviour
     public void ResetFinance()
     {
         incomeItems.Clear();
+        investmentIncomeItems.Clear();
         expenseItems.Clear();
         currentCash = initialCash;
         UpdateCurrentPaydayDisplay();
@@ -299,11 +342,18 @@ public class PlayerFinance : MonoBehaviour
     public string GetFinanceSummary()
     {
         string summary = $"Total Income: {TotalIncome:F2}\n" +
+                         $"Total Investment Income: {TotalInvestmentIncome:F2}\n" +
                          $"Total Expenses: {TotalExpenses:F2}\n" +
                          $"Current Payday: {CurrentPayday:F2}\n\n";
         
         summary += "Income Items:\n";
         foreach (var item in incomeItems)
+        {
+            summary += $"  - {item.details}: {item.amount:F2}\n";
+        }
+        
+        summary += "\nInvestment Income Items:\n";
+        foreach (var item in investmentIncomeItems)
         {
             summary += $"  - {item.details}: {item.amount:F2}\n";
         }
