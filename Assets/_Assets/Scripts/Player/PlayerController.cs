@@ -39,6 +39,15 @@ public class PlayerController : MonoBehaviour
     public List<Transform> PathWaypoints => pathWaypoints; // Public access to path waypoints
     
     /// <summary>
+    /// Sets the one dice flag so next roll will use only one dice
+    /// </summary>
+    public void SetOneDiceFlag()
+    {
+        shouldUseOneDice = true;
+        Debug.Log("One dice flag set. Next roll will use only one dice.");
+    }
+    
+    /// <summary>
     /// Clears the one dice flag so next roll will use two dice
     /// </summary>
     public void ClearOneDiceFlag()

@@ -771,6 +771,28 @@ public class GameManager : MonoBehaviour
         PlayerController currentPlayerCtrl = GetCurrentPlayerController();
         string currentWaypointName = currentPlayerCtrl != null ? currentPlayerCtrl.GetCurrentWaypointName() : string.Empty;
         
+        // PRIORITY 0: Check if player landed on Path33_FortuneRoad - grant extra turn with one dice
+        if (!string.IsNullOrEmpty(currentWaypointName) && 
+            currentWaypointName.Equals("Path33_FortuneRoad", System.StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.Log($"[GameManager] Player landed on Path33_FortuneRoad! Granting extra turn with one dice.");
+            
+            // Set the one dice flag for the next roll
+            if (currentPlayerCtrl != null)
+            {
+                // Use reflection or add a public method to set the flag
+                // For now, we'll need to add a public method to PlayerController
+                currentPlayerCtrl.SetOneDiceFlag();
+            }
+            
+            // Spawn one dice and keep the same player's turn (don't switch)
+            SpawnDice();
+            isProcessingDiceResult = false;
+            
+            Debug.Log($"[GameManager] Extra turn granted. Player can now roll one dice.");
+            return; // Don't switch to next player - same player gets another turn
+        }
+        
         // PRIORITY 1: Check if this is a Stock path (handled by StockPathManager)
         // Stock paths activate the StockMarket and must complete before switching players
         bool isStockPath = false;
@@ -807,7 +829,20 @@ public class GameManager : MonoBehaviour
         if (willShowCard || isCardAnimating)
         {
             // Wait for card to be destroyed, then spawn dice and switch to next player
-            StartCoroutine(WaitForCardAndRespawnDice());
+            // Check if this is Path33_FortuneRoad - if so, grant extra turn with one dice
+            bool isFortuneRoadPath = !string.IsNullOrEmpty(currentWaypointName) && 
+                                     currentWaypointName.Equals("Path33_FortuneRoad", System.StringComparison.OrdinalIgnoreCase);
+            
+            if (isFortuneRoadPath)
+            {
+                // Path33_FortuneRoad with card - wait for card, then grant extra turn with one dice
+                StartCoroutine(WaitForCardAndGrantExtraTurn(currentPlayerCtrl));
+            }
+            else
+            {
+                // Normal card path - wait for card, then switch to next player
+                StartCoroutine(WaitForCardAndRespawnDice());
+            }
         }
         else
         {
@@ -858,6 +893,45 @@ public class GameManager : MonoBehaviour
         
         // Switch to next player's turn
         SwitchToNextPlayer();
+    }
+    
+    /// <summary>
+    /// Waits for card to complete, then grants extra turn with one dice for Path33_FortuneRoad
+    /// </summary>
+    private IEnumerator WaitForCardAndGrantExtraTurn(PlayerController currentPlayerCtrl)
+    {
+        // First, wait for the card to start animating (in case it hasn't started yet)
+        int maxWaitFrames = 10;
+        int framesWaited = 0;
+        while (cardsManager != null && !cardsManager.IsCardAnimating && framesWaited < maxWaitFrames)
+        {
+            yield return null;
+            framesWaited++;
+        }
+        
+        // Now wait until card animation is complete (card is destroyed)
+        while (cardsManager != null && cardsManager.IsCardAnimating)
+        {
+            yield return null;
+        }
+        
+        // Add a small delay after card is destroyed to ensure it's completely gone
+        yield return new WaitForSeconds(0.1f);
+        
+        // Card has been destroyed, grant extra turn with one dice
+        Debug.Log($"[GameManager] Card completed on Path33_FortuneRoad. Granting extra turn with one dice.");
+        
+        // Set the one dice flag for the next roll
+        if (currentPlayerCtrl != null)
+        {
+            currentPlayerCtrl.SetOneDiceFlag();
+        }
+        
+        // Spawn one dice and keep the same player's turn (don't switch)
+        SpawnDice();
+        isProcessingDiceResult = false;
+        
+        Debug.Log($"[GameManager] Extra turn granted. Player can now roll one dice.");
     }
     
     /// <summary>

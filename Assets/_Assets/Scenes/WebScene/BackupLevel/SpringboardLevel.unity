@@ -368,11 +368,11 @@ MonoBehaviour:
   oneDiceSpawner: {fileID: 1225757851}
   dicePrefab: {fileID: 512676549986405767, guid: 133e4974bd8608147bcc3880ae313a26, type: 3}
   diceCheckInterval: 0.5
-  IsDebugging: 0
-  debugFixedSteps: 4
+  IsDebugging: 1
+  debugFixedSteps: 32
   playerManager: {fileID: 1152732730}
   cardsManager: {fileID: 324961890}
-  stockPathManager: {fileID: 0}
+  stockPathManager: {fileID: 835444306}
   miniGamesUI: {fileID: 582922567}
 --- !u!1 &37908566
 GameObject:
@@ -8252,7 +8252,7 @@ MonoBehaviour:
   - 6600
   - 6600
   - 6600
-  playerIsAI: 00000101
+  playerIsAI: 00000000
   playerPurchaseProbability:
   - 1
   - 1

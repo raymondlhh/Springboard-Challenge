@@ -237,6 +237,9 @@ public class PlayerManager : MonoBehaviour
             // Note: Player model should already be part of the playerPrefab structure
             // The Player class will find it automatically if needed
             
+            // Assign player material to PlayerPrefab's Cube Mesh Renderer
+            AssignPlayerMaterialToCube(playerObj, i);
+            
             // Spawn PlayerUI for this player
             SpawnPlayerUI(player, playerName);
             
@@ -741,6 +744,91 @@ public class PlayerManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Assigns the player's material to PlayerPrefab's Cube Mesh Renderer
+    /// </summary>
+    private void AssignPlayerMaterialToCube(GameObject playerObj, int playerID)
+    {
+        if (playerObj == null || playerID < 0 || playerID >= playerItemMaterials.Count)
+        {
+            return;
+        }
+        
+        Material playerMaterial = playerItemMaterials[playerID];
+        if (playerMaterial == null)
+        {
+            Debug.LogWarning($"Player material for player ID {playerID} is not assigned! Cannot assign to Cube.");
+            return;
+        }
+        
+        // Find Cube GameObject in the player hierarchy
+        // The Cube is typically a child of the model (e.g., Boy@Breathing Idle/Cube)
+        Transform cubeTransform = FindCubeInPlayerHierarchy(playerObj.transform);
+        if (cubeTransform == null)
+        {
+            Debug.LogWarning($"Cube not found in PlayerPrefab hierarchy for player ID {playerID}. Player: {playerObj.name}");
+            return;
+        }
+        
+        // Get Mesh Renderer component from Cube
+        MeshRenderer cubeMeshRenderer = cubeTransform.GetComponent<MeshRenderer>();
+        if (cubeMeshRenderer == null)
+        {
+            Debug.LogWarning($"MeshRenderer component not found on Cube GameObject: {cubeTransform.name}");
+            return;
+        }
+        
+        // Assign material to Mesh Renderer
+        // Create a new materials array with the player's material
+        Material[] materials = new Material[cubeMeshRenderer.materials.Length];
+        materials[0] = playerMaterial;
+        // Copy other materials if they exist
+        for (int i = 1; i < materials.Length; i++)
+        {
+            materials[i] = cubeMeshRenderer.materials[i];
+        }
+        cubeMeshRenderer.materials = materials;
+        
+        Debug.Log($"Assigned material {playerMaterial.name} to Cube Mesh Renderer for player ID {playerID} (Player: {playerObj.name})");
+    }
+    
+    /// <summary>
+    /// Finds the Cube GameObject in the player hierarchy
+    /// </summary>
+    private Transform FindCubeInPlayerHierarchy(Transform parent)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+        
+        // First, try to find by name (exact match)
+        Transform cubeTransform = parent.Find("Cube");
+        if (cubeTransform != null)
+        {
+            return cubeTransform;
+        }
+        
+        // If not found, search recursively in children
+        foreach (Transform child in parent)
+        {
+            // Check if this child is named "Cube"
+            if (child.name == "Cube")
+            {
+                return child;
+            }
+            
+            // Recursively search in this child's hierarchy
+            Transform found = FindCubeInPlayerHierarchy(child);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
     /// Assigns the player's material to UpperBanner Image component
     /// </summary>
     private void AssignPlayerMaterialToUI(GameObject playerUIObj, int playerID)
@@ -773,13 +861,69 @@ public class PlayerManager : MonoBehaviour
             return;
         }
         
-        // Assign the original material directly to Image component
-        // Unity UI automatically creates a material instance when you assign a material to an Image component
-        // This ensures each UI element has its own isolated material instance
-        // The instance is automatically cleaned up when the GameObject is destroyed
-        upperBannerImage.material = playerMaterial;
+        // Create a UI-compatible material instance to prevent interference from 3D card rendering
+        // Cards use 3D shaders (URP/Lit) which can affect global shader state
+        // By creating a material instance with UI shader, we ensure complete isolation
+        Material uiMaterialInstance = CreateUIMaterialFromPlayerMaterial(playerMaterial, playerID);
         
-        Debug.Log($"Assigned material {playerMaterial.name} to UpperBanner Image for player ID {playerID} (Unity will auto-create instance)");
+        // Assign the UI material instance to Image component
+        // This ensures the material won't be affected by card rendering
+        upperBannerImage.material = uiMaterialInstance;
+        
+        Debug.Log($"Assigned UI material instance to UpperBanner Image for player ID {playerID}");
+    }
+    
+    /// <summary>
+    /// Creates a UI-compatible material instance from a player material
+    /// This prevents 3D card rendering from affecting UI materials
+    /// </summary>
+    private Material CreateUIMaterialFromPlayerMaterial(Material playerMaterial, int playerID)
+    {
+        // Find or create a UI shader (Unity's default UI shader)
+        Shader uiShader = Shader.Find("UI/Default");
+        if (uiShader == null)
+        {
+            // Fallback to Unlit shader if UI/Default is not available
+            uiShader = Shader.Find("Unlit/Texture");
+        }
+        
+        if (uiShader == null)
+        {
+            Debug.LogWarning($"Could not find UI shader! Using original material shader. This may cause rendering issues.");
+            // Fallback: create instance of original material
+            Material materialInstance = Material.Instantiate(playerMaterial);
+            materialInstance.name = $"{playerMaterial.name}_UI_Instance_{playerID}";
+            return materialInstance;
+        }
+        
+        // Create a new material with UI shader
+        Material uiMaterial = new Material(uiShader);
+        uiMaterial.name = $"{playerMaterial.name}_UI_Instance_{playerID}";
+        
+        // Copy relevant properties from player material to UI material
+        // Try to copy the main texture/color
+        if (playerMaterial.HasProperty("_BaseMap") || playerMaterial.HasProperty("_MainTex"))
+        {
+            string textureProperty = playerMaterial.HasProperty("_BaseMap") ? "_BaseMap" : "_MainTex";
+            if (playerMaterial.GetTexture(textureProperty) != null)
+            {
+                uiMaterial.mainTexture = playerMaterial.GetTexture(textureProperty);
+            }
+        }
+        
+        // Copy color if available
+        if (playerMaterial.HasProperty("_BaseColor") || playerMaterial.HasProperty("_Color"))
+        {
+            string colorProperty = playerMaterial.HasProperty("_BaseColor") ? "_BaseColor" : "_Color";
+            uiMaterial.color = playerMaterial.GetColor(colorProperty);
+        }
+        else
+        {
+            // Default to white if no color property
+            uiMaterial.color = Color.white;
+        }
+        
+        return uiMaterial;
     }
     
     /// <summary>
