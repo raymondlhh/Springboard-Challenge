@@ -265,6 +265,20 @@ public class PlayerFinance : MonoBehaviour
     }
     
     /// <summary>
+    /// Set the initial cash amount (can be called before or after Start())
+    /// </summary>
+    public void SetInitialCash(float amount)
+    {
+        initialCash = amount;
+        // Update currentCash if it hasn't been initialized yet, or if we want to reset it
+        // This handles both cases: before Start() runs, and after Start() runs
+        currentCash = initialCash;
+        UpdateCurrentCashDisplay();
+        OnCashChanged?.Invoke(currentCash);
+        Debug.Log($"Initial cash set to: {initialCash}, current cash updated to: {currentCash}");
+    }
+    
+    /// <summary>
     /// Resets all financial data (useful for new game or testing)
     /// </summary>
     public void ResetFinance()

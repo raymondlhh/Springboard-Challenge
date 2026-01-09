@@ -8,11 +8,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float jumpHeight = 1f;
     [SerializeField] private float jumpDuration = 0.5f;
     
-    [Header("Path Waypoints")]
+    [Header("Path Waypoints (Auto-Assign)")]
     [Tooltip("Manually assign all path waypoints in order")]
     [SerializeField] private List<Transform> pathWaypoints = new List<Transform>();
     
-    [Header("Fortune Road Waypoints")]
+    [Header("Fortune Road Waypoints (Auto-Assign)")]
     [Tooltip("Assign Fortune Road waypoints in order: FortuneRoad01 to FortuneRoad05")]
     [SerializeField] private List<Transform> fortuneRoadWaypoints = new List<Transform>();
     [Tooltip("Assign Path39_TreasureChest waypoint (the path after Fortune Road sequence)")]

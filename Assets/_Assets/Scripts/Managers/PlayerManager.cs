@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 
 /// <summary>
 /// Manages all players in the game (1-4 players: 1 human + 0-3 AI)
@@ -14,6 +15,19 @@ public class PlayerManager : MonoBehaviour
     [Range(1, 4)]
     [SerializeField] private int numberOfPlayers = 4;
     [SerializeField] private GameObject playerPrefab; // Prefab with Player component (model should be inside this prefab)
+    [SerializeField] private GameObject playerUIPrefab; // Prefab with PlayerUI component
+    
+    [Header("Player Names")]
+    [Tooltip("Custom names for each player. Element 0 = Player 1, Element 1 = Player 2, etc. Leave empty to use default names.")]
+    [SerializeField] private List<string> playerNames = new List<string>();
+    
+    [Header("Player Initial Cash")]
+    [Tooltip("Initial cash amount for each player. Element 0 = Player 1, Element 1 = Player 2, etc. Leave empty to use prefab default.")]
+    [SerializeField] private List<float> playerInitialCash = new List<float>();
+    
+    [Header("Player UI References")]
+    [Tooltip("NameText UI elements for each player. Can be manually assigned or auto-populated when players are spawned.")]
+    [SerializeField] private List<TextMeshProUGUI> playerNameTexts = new List<TextMeshProUGUI>();
     
     [Header("Player Spawn Settings")]
     [Tooltip("Spawn positions for each player. Should have at least as many spawn points as numberOfPlayers.")]
@@ -96,15 +110,20 @@ public class PlayerManager : MonoBehaviour
         // Validate before initializing
         ValidateNumberOfPlayers();
         
-        // Clear existing players
+        // Clear existing players and their UI
         foreach (var player in players)
         {
             if (player != null)
             {
+                // Destroy associated PlayerUI
+                DestroyPlayerUI(player);
                 Destroy(player.gameObject);
             }
         }
         players.Clear();
+        
+        // Clear NameText list
+        playerNameTexts.Clear();
         
         // Find Path01_Start for initial spawn position
         Transform startWaypoint = FindStartWaypoint();
@@ -146,9 +165,30 @@ public class PlayerManager : MonoBehaviour
                 player = playerObj.AddComponent<Player>();
             }
             
-            // Initialize player
-            string playerName = isAI ? $"AI Player {i}" : "Human Player";
+            // Initialize player with custom name if provided, otherwise use default
+            string playerName;
+            if (i < playerNames.Count && !string.IsNullOrEmpty(playerNames[i]))
+            {
+                // Use custom name from list
+                playerName = playerNames[i];
+            }
+            else
+            {
+                // Use default name
+                playerName = isAI ? $"AI Player {i}" : "Human Player";
+            }
             player.Initialize(i, playerName, isAI);
+            
+            // Set initial cash if provided in list
+            if (player.PlayerFinance != null && i < playerInitialCash.Count)
+            {
+                float initialCash = playerInitialCash[i];
+                if (initialCash > 0)
+                {
+                    player.PlayerFinance.SetInitialCash(initialCash);
+                    Debug.Log($"Set initial cash for {playerName} to: {initialCash}");
+                }
+            }
             
             // Auto-assign waypoints to player's PlayerController
             AssignWaypointsToPlayer(player);
@@ -167,6 +207,9 @@ public class PlayerManager : MonoBehaviour
             
             // Note: Player model should already be part of the playerPrefab structure
             // The Player class will find it automatically if needed
+            
+            // Spawn PlayerUI for this player
+            SpawnPlayerUI(player, playerName);
             
             players.Add(player);
             Debug.Log($"Created {(isAI ? "AI" : "Human")} player: {playerName}");
@@ -565,5 +608,175 @@ public class PlayerManager : MonoBehaviour
         
         Debug.LogWarning("Start waypoint (Path01_Start) not found! Players may spawn at origin.");
         return null;
+    }
+    
+    /// <summary>
+    /// Spawn PlayerUI for a player inside PlayerProfiles
+    /// </summary>
+    private void SpawnPlayerUI(Player player, string playerName)
+    {
+        if (playerUIPrefab == null)
+        {
+            Debug.LogWarning("PlayerUI prefab is not assigned! Cannot spawn PlayerUI.");
+            return;
+        }
+        
+        // Find PlayerProfiles GameObject
+        GameObject playerProfiles = GameObject.Find("PlayerProfiles");
+        if (playerProfiles == null)
+        {
+            // Try alternative paths
+            playerProfiles = GameObject.Find("Canvas/MainUI/PlayerProfiles");
+            if (playerProfiles == null)
+            {
+                playerProfiles = GameObject.Find("MainUI/PlayerProfiles");
+            }
+        }
+        
+        if (playerProfiles == null)
+        {
+            Debug.LogWarning("PlayerProfiles GameObject not found! Cannot spawn PlayerUI.");
+            return;
+        }
+        
+        // Instantiate PlayerUI as child of PlayerProfiles
+        GameObject playerUIObj = Instantiate(playerUIPrefab, playerProfiles.transform);
+        playerUIObj.name = $"PlayerUI_{playerName}";
+        
+        // Get PlayerUI component and initialize it
+        PlayerUI playerUI = playerUIObj.GetComponent<PlayerUI>();
+        if (playerUI == null)
+        {
+            Debug.LogWarning($"PlayerUI component not found on prefab! GameObject: {playerUIPrefab.name}");
+            return;
+        }
+        
+        // Initialize PlayerUI with player name and finance
+        if (player.PlayerFinance != null)
+        {
+            playerUI.Initialize(playerName, player.PlayerFinance);
+            Debug.Log($"Spawned and initialized PlayerUI for {playerName}");
+        }
+        else
+        {
+            Debug.LogWarning($"PlayerFinance is null for player {playerName}! PlayerUI may not work correctly.");
+            playerUI.SetPlayerName(playerName);
+        }
+        
+        // Extract and store NameText reference
+        TextMeshProUGUI nameText = GetNameTextFromPlayerUI(playerUI);
+        if (nameText != null)
+        {
+            // Ensure list is large enough
+            while (playerNameTexts.Count <= player.PlayerID)
+            {
+                playerNameTexts.Add(null);
+            }
+            playerNameTexts[player.PlayerID] = nameText;
+            Debug.Log($"Added NameText for player {playerName} (ID: {player.PlayerID}) to list");
+        }
+        else
+        {
+            Debug.LogWarning($"Could not find NameText in PlayerUI for {playerName}");
+        }
+    }
+    
+    /// <summary>
+    /// Get NameText component from PlayerUI
+    /// </summary>
+    private TextMeshProUGUI GetNameTextFromPlayerUI(PlayerUI playerUI)
+    {
+        if (playerUI == null) return null;
+        
+        // Try to find NameText in children
+        TextMeshProUGUI[] texts = playerUI.GetComponentsInChildren<TextMeshProUGUI>();
+        foreach (var text in texts)
+        {
+            if (text.name == "NameText")
+            {
+                return text;
+            }
+        }
+        
+        // Try to find by Transform path
+        Transform nameTextTransform = playerUI.transform.Find("NameText");
+        if (nameTextTransform == null)
+        {
+            nameTextTransform = playerUI.transform.Find("UpperBanner/NameText");
+        }
+        if (nameTextTransform != null)
+        {
+            return nameTextTransform.GetComponent<TextMeshProUGUI>();
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Destroy PlayerUI associated with a player
+    /// </summary>
+    private void DestroyPlayerUI(Player player)
+    {
+        if (player == null) return;
+        
+        // Find PlayerProfiles
+        GameObject playerProfiles = GameObject.Find("PlayerProfiles");
+        if (playerProfiles == null)
+        {
+            playerProfiles = GameObject.Find("Canvas/MainUI/PlayerProfiles");
+            if (playerProfiles == null)
+            {
+                playerProfiles = GameObject.Find("MainUI/PlayerProfiles");
+            }
+        }
+        
+        if (playerProfiles == null) return;
+        
+        // Find and destroy PlayerUI with matching name
+        string playerUIName = $"PlayerUI_{player.PlayerName}";
+        Transform playerUITransform = playerProfiles.transform.Find(playerUIName);
+        if (playerUITransform != null)
+        {
+            Destroy(playerUITransform.gameObject);
+            Debug.Log($"Destroyed PlayerUI for {player.PlayerName}");
+        }
+        
+        // Remove NameText from list
+        if (player.PlayerID >= 0 && player.PlayerID < playerNameTexts.Count)
+        {
+            playerNameTexts[player.PlayerID] = null;
+        }
+    }
+    
+    /// <summary>
+    /// Get NameText for a specific player by ID
+    /// </summary>
+    public TextMeshProUGUI GetPlayerNameText(int playerID)
+    {
+        if (playerID >= 0 && playerID < playerNameTexts.Count)
+        {
+            return playerNameTexts[playerID];
+        }
+        return null;
+    }
+    
+    /// <summary>
+    /// Get NameText for a specific player by Player reference
+    /// </summary>
+    public TextMeshProUGUI GetPlayerNameText(Player player)
+    {
+        if (player != null)
+        {
+            return GetPlayerNameText(player.PlayerID);
+        }
+        return null;
+    }
+    
+    /// <summary>
+    /// Get all NameText references
+    /// </summary>
+    public IReadOnlyList<TextMeshProUGUI> GetAllPlayerNameTexts()
+    {
+        return playerNameTexts.AsReadOnly();
     }
 }
