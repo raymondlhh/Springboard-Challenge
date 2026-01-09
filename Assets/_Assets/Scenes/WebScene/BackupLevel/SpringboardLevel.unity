@@ -368,8 +368,8 @@ MonoBehaviour:
   oneDiceSpawner: {fileID: 1225757851}
   dicePrefab: {fileID: 512676549986405767, guid: 133e4974bd8608147bcc3880ae313a26, type: 3}
   diceCheckInterval: 0.5
-  IsDebugging: 0
-  debugFixedSteps: 1
+  IsDebugging: 1
+  debugFixedSteps: 3
   playerManager: {fileID: 1152732730}
   cardsManager: {fileID: 324961890}
   miniGamesUI: {fileID: 582922567}
@@ -2788,8 +2788,8 @@ MonoBehaviour:
   - {fileID: 4308141281054432705, guid: 5e1cd934b9dc72b4fb24a6e3b1782302, type: 3}
   cardsStartPath: {fileID: 19521630}
   cardsEndPath: {fileID: 37908567}
-  cardMoveSpeed: 2
-  cardWaitDuration: 2
+  cardMoveSpeed: 3
+  cardWaitDuration: 1
   playerManager: {fileID: 1152732730}
   debugManager: {fileID: 835444305}
   realEstateData: {fileID: 11400000, guid: 7bc4a533607fbfa4ab43a76bb6438af4, type: 2}
@@ -8206,16 +8206,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 582d95f79ef6de84b9c138bf1f239eba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numberOfPlayers: 1
+  numberOfPlayers: 2
   playerPrefab: {fileID: 98607575583157904, guid: cc311b4f249efe14f8c3b14680b21500, type: 3}
   playerUIPrefab: {fileID: 2869733658695302378, guid: 2de2d6af710bd6944ac67669a8780397, type: 3}
   playerNames:
   - Raymond
+  - Jay
+  - Matthew
+  - Ayaan
   playerInitialCash:
   - 6600
+  - 6600
+  - 6600
+  - 6600
+  playerIsAI: 01010000
+  playerPurchaseProbability:
+  - 1
+  - 1
+  - 1
+  - 1
   playerNameTexts:
   - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   playerSpawnPoints:
+  - {fileID: 657847124}
+  - {fileID: 657847124}
+  - {fileID: 657847124}
   - {fileID: 657847124}
   pathsParent: {fileID: 1384983444}
   fortuneRoadParent: {fileID: 192475945}

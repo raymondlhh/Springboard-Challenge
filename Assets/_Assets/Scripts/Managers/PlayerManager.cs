@@ -24,6 +24,12 @@ public class PlayerManager : MonoBehaviour
     [Tooltip("Initial cash amount for each player. Element 0 = Player 1, Element 1 = Player 2, etc. Leave empty to use prefab default.")]
     [SerializeField] private List<float> playerInitialCash = new List<float>();
     
+    [Tooltip("AI status for each player. Element 0 = Player 1, Element 1 = Player 2, etc. True = AI, False = Human. Leave empty to use default (first player human, rest AI).")]
+    [SerializeField] private List<bool> playerIsAI = new List<bool>();
+    
+    [Tooltip("Purchase probability for each AI player (0-1). Element 0 = Player 1, Element 1 = Player 2, etc. 0 = never buy, 1 = always buy (if affordable). Only applies to AI players. Leave empty to use AIController default.")]
+    [SerializeField] private List<float> playerPurchaseProbability = new List<float>();
+    
     [Header("Player Name Texts (Auto-Assign)")]
     [Tooltip("NameText UI elements for each player. Can be manually assigned or auto-populated when players are spawned.")]
     [SerializeField] private List<TextMeshProUGUI> playerNameTexts = new List<TextMeshProUGUI>();
@@ -130,7 +136,17 @@ public class PlayerManager : MonoBehaviour
         // Create players based on numberOfPlayers
         for (int i = 0; i < numberOfPlayers; i++)
         {
-            bool isAI = i > 0; // First player (index 0) is human, rest are AI
+            // Determine if player is AI from list, or use default (first player human, rest AI)
+            bool isAI;
+            if (i < playerIsAI.Count)
+            {
+                isAI = playerIsAI[i];
+            }
+            else
+            {
+                // Default behavior: first player (index 0) is human, rest are AI
+                isAI = i > 0;
+            }
             
             // Determine spawn position
             Vector3 spawnPos = Vector3.zero;
@@ -189,6 +205,17 @@ public class PlayerManager : MonoBehaviour
                 }
             }
             
+            // Set purchase probability for AI players if provided in list
+            if (isAI && player.AIController != null && i < playerPurchaseProbability.Count)
+            {
+                float purchaseProb = playerPurchaseProbability[i];
+                if (purchaseProb >= 0f && purchaseProb <= 1f)
+                {
+                    player.AIController.SetPurchaseProbability(purchaseProb);
+                    Debug.Log($"Set purchase probability for {playerName} to: {purchaseProb}");
+                }
+            }
+            
             // Auto-assign waypoints to player's PlayerController
             AssignWaypointsToPlayer(player);
             
@@ -214,7 +241,10 @@ public class PlayerManager : MonoBehaviour
             Debug.Log($"Created {(isAI ? "AI" : "Human")} player: {playerName}");
         }
         
-        Debug.Log($"Initialized {players.Count} player(s): 1 Human + {players.Count - 1} AI");
+        // Count human and AI players for summary
+        int humanCount = players.Count(p => !p.IsAI);
+        int aiCount = players.Count(p => p.IsAI);
+        Debug.Log($"Initialized {players.Count} player(s): {humanCount} Human + {aiCount} AI");
         
         // Set first player as current
         if (players.Count > 0)

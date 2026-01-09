@@ -29,10 +29,27 @@ public class AIController : MonoBehaviour
     {
         if (isMakingDecision)
         {
+            Debug.LogWarning("AIController: Already making a decision, skipping...");
             yield break;
         }
         
         isMakingDecision = true;
+        
+        // Try to find player if it's null (safety check)
+        if (player == null)
+        {
+            player = GetComponent<Player>();
+            if (player == null)
+            {
+                Debug.LogError("AIController: Player reference is null and cannot be found on GameObject!");
+                isMakingDecision = false;
+                onDecisionMade?.Invoke(false);
+                yield break;
+            }
+            Debug.LogWarning("AIController: Player was null, found it on GameObject. Consider calling Initialize() properly.");
+        }
+        
+        Debug.Log($"AIController: Starting purchase decision. Cost: {cost}, Income: {income}, Current PurchaseProb: {purchaseProbability}");
         
         // Simulate thinking time
         float delay = Random.Range(decisionDelayMin, decisionDelayMax);
@@ -47,30 +64,57 @@ public class AIController : MonoBehaviour
             // Check if AI can afford it
             if (currentCash >= cost)
             {
-                // Calculate purchase probability based on cash reserves
-                // More cash = more likely to purchase
-                float cashRatio = currentCash / (cost * 2f); // Consider if cash is at least 2x the cost
-                float adjustedProbability = purchaseProbability * Mathf.Clamp01(cashRatio);
+                float adjustedProbability = purchaseProbability;
                 
-                // Also consider income potential
-                if (income > 0)
+                // If purchaseProbability is 1.0, always buy (if affordable)
+                if (purchaseProbability >= 1.0f)
                 {
-                    adjustedProbability += 0.2f; // Boost probability if it generates income
+                    shouldPurchase = true;
+                    adjustedProbability = 1.0f; // For debug log
+                    Debug.Log($"AIController: Purchase probability is 1.0, will always BUY (if affordable)");
+                }
+                else
+                {
+                    // For probabilities < 1.0, consider cash reserves
+                    // More cash = more likely to purchase
+                    float cashRatio = currentCash / (cost * 2f); // Consider if cash is at least 2x the cost
+                    adjustedProbability = purchaseProbability * Mathf.Clamp01(cashRatio);
+                    
+                    // Also consider income potential
+                    if (income > 0)
+                    {
+                        adjustedProbability += 0.2f; // Boost probability if it generates income
+                        adjustedProbability = Mathf.Clamp01(adjustedProbability); // Ensure it doesn't exceed 1.0
+                    }
+                    
+                    // Make decision
+                    float randomValue = Random.Range(0f, 1f);
+                    shouldPurchase = randomValue < adjustedProbability;
+                    Debug.Log($"AIController: Random value: {randomValue}, Adjusted prob: {adjustedProbability}, Decision: {(shouldPurchase ? "BUY" : "PASS")}");
                 }
                 
-                // Make decision
-                shouldPurchase = Random.Range(0f, 1f) < adjustedProbability;
-                
-                Debug.Log($"AI {player.PlayerName} decision: Cost=${cost}, Cash=${currentCash}, Income=${income}, Decision={(shouldPurchase ? "BUY" : "PASS")}");
+                Debug.Log($"AI {player.PlayerName} decision: Cost=${cost}, Cash=${currentCash}, Income=${income}, PurchaseProb={purchaseProbability}, AdjustedProb={adjustedProbability}, Decision={(shouldPurchase ? "BUY" : "PASS")}");
             }
             else
             {
                 Debug.Log($"AI {player.PlayerName} cannot afford: Cost=${cost}, Cash=${currentCash}");
             }
         }
+        else
+        {
+            Debug.LogWarning($"AIController: Player or PlayerFinance is null! Player: {(player != null ? "exists" : "null")}, Finance: {(player != null && player.PlayerFinance != null ? "exists" : "null")}");
+        }
         
         isMakingDecision = false;
+        
+        Debug.Log($"AIController: Invoking callback with decision: {(shouldPurchase ? "BUY" : "PASS")}");
         onDecisionMade?.Invoke(shouldPurchase);
+        
+        // Ensure callback is invoked even if it's null
+        if (onDecisionMade == null)
+        {
+            Debug.LogWarning("AIController: onDecisionMade callback is null!");
+        }
     }
     
     /// <summary>
@@ -91,6 +135,15 @@ public class AIController : MonoBehaviour
     public void SetPurchaseProbability(float probability)
     {
         purchaseProbability = Mathf.Clamp01(probability);
+        Debug.Log($"AIController: Purchase probability set to {purchaseProbability} for player {(player != null ? player.PlayerName : "Unknown")}");
+    }
+    
+    /// <summary>
+    /// Get the current purchase probability
+    /// </summary>
+    public float GetPurchaseProbability()
+    {
+        return purchaseProbability;
     }
     
     /// <summary>

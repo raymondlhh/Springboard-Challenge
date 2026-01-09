@@ -142,6 +142,84 @@ public class RealEstateUI : MonoBehaviour
         {
             Debug.LogWarning("ForSaleUI panel is null! Cannot show UI.");
         }
+        
+        // Check if current player is AI and make decision automatically
+        if (playerManager != null && playerManager.CurrentPlayer != null && playerManager.CurrentPlayer.IsAI)
+        {
+            StartCoroutine(MakeAIDecision());
+        }
+    }
+    
+    /// <summary>
+    /// Makes a purchase decision for AI players
+    /// </summary>
+    private System.Collections.IEnumerator MakeAIDecision()
+    {
+        if (currentProperty == null || playerManager == null || playerManager.CurrentPlayer == null)
+        {
+            yield break;
+        }
+        
+        AIController aiController = playerManager.CurrentPlayer.AIController;
+        if (aiController == null)
+        {
+            Debug.LogWarning($"AIController not found for AI player {playerManager.CurrentPlayer.PlayerName}");
+            OnNoClicked(); // Default to no if AI controller missing
+            yield break;
+        }
+        
+        // Get current player's finance
+        PlayerFinance playerFinance = playerManager.CurrentPlayer.PlayerFinance;
+        if (playerFinance == null)
+        {
+            Debug.LogWarning("PlayerFinance is null for AI player!");
+            OnNoClicked(); // Default to no if finance missing
+            yield break;
+        }
+        
+        // Make decision using AI controller
+        bool shouldPurchase = false;
+        bool decisionMade = false;
+        
+        Debug.Log($"RealEstateUI: Starting AI decision for {playerManager.CurrentPlayer.PlayerName}. Cost: {currentProperty.downpayment}, Income: {currentProperty.income}");
+        
+        yield return StartCoroutine(aiController.MakePurchaseDecision(
+            currentProperty.downpayment,
+            currentProperty.income,
+            (decision) => 
+            { 
+                shouldPurchase = decision;
+                decisionMade = true;
+                Debug.Log($"RealEstateUI: AI decision callback received. Decision: {(decision ? "BUY" : "PASS")}");
+            }
+        ));
+        
+        // Wait until decision is made (should be immediate after coroutine completes, but just in case)
+        float timeout = 5f;
+        float elapsed = 0f;
+        while (!decisionMade && elapsed < timeout)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        
+        if (!decisionMade)
+        {
+            Debug.LogWarning($"RealEstateUI: AI decision timeout! Defaulting to PASS.");
+            shouldPurchase = false;
+        }
+        
+        // Execute the decision
+        if (shouldPurchase)
+        {
+            Debug.Log($"RealEstateUI: AI {playerManager.CurrentPlayer.PlayerName} decided to BUY {currentProperty.displayName}");
+            OnYesClicked();
+        }
+        else
+        {
+            Debug.Log($"RealEstateUI: AI {playerManager.CurrentPlayer.PlayerName} decided to PASS on {currentProperty.displayName}");
+            OnNoClicked();
+        }
     }
     
     private void OnYesClicked()

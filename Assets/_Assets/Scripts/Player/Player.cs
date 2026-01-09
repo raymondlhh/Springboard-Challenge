@@ -62,14 +62,23 @@ public class Player : MonoBehaviour
         }
         
         // Setup AI controller if this is an AI player
-        if (isAI && aiController == null)
+        if (isAI)
         {
-            aiController = GetComponent<AIController>();
+            // Get or create AIController
             if (aiController == null)
             {
-                aiController = gameObject.AddComponent<AIController>();
+                aiController = GetComponent<AIController>();
+                if (aiController == null)
+                {
+                    aiController = gameObject.AddComponent<AIController>();
+                }
             }
-            aiController.Initialize(this);
+            // Always initialize, even if it already existed (to ensure player reference is set)
+            if (aiController != null)
+            {
+                aiController.Initialize(this);
+                Debug.Log($"AIController initialized for AI player: {playerName}");
+            }
         }
         
         // Initialize player items list
