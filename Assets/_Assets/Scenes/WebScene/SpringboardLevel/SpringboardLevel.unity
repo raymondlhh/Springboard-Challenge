@@ -171,8 +171,8 @@ MonoBehaviour:
   IsSecondMethod: 1
   diceCheckInterval: 0.1
   dicePrefab: {fileID: 512676549986405767, guid: 133e4974bd8608147bcc3880ae313a26, type: 3}
-  IsDebugging: 1
-  debugFixedSteps: 7
+  IsDebugging: 0
+  debugFixedSteps: 32
   diceMeter: {fileID: 1520114803}
   doubleVideoPlayers:
   - {fileID: 1585298038}
@@ -414,7 +414,7 @@ MonoBehaviour:
   cardsManager: {fileID: 324961890}
   stockPathManager: {fileID: 835444306}
   stockUI: {fileID: 582922567}
-  IsFirstRound: 1
+  IsFirstRound: 0
 --- !u!1 &37908566
 GameObject:
   m_ObjectHideFlags: 0

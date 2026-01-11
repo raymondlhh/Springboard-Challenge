@@ -668,6 +668,14 @@ public class GameManager : MonoBehaviour
             Debug.Log($"DEBUG MODE: Using fixed steps ({diceManager.DebugFixedSteps}) instead of dice sum ({diceSum})");
         }
         
+        // Clear one dice flag immediately after using it, so next roll will be two dice
+        if (useOneDice && currentPlayerCtrl != null)
+        {
+            // Clear the flag through a public method or directly if accessible
+            currentPlayerCtrl.ClearOneDiceFlag();
+            Debug.Log("One dice flag cleared (Second Method). Next roll will use two dice.");
+        }
+        
         // Move current player based on calculated movement steps
         if (currentPlayerCtrl != null && movementSteps > 0)
         {
