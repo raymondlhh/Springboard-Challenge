@@ -18,6 +18,17 @@ public class DiceManager : MonoBehaviour
     public float DiceCheckInterval => diceCheckInterval;
     public GameObject DicePrefab => dicePrefab;
     
+    /// <summary>
+    /// Checks if both dice have the same value (only valid in two dice mode)
+    /// </summary>
+    /// <param name="firstDiceValue">Value of the first dice</param>
+    /// <param name="secondDiceValue">Value of the second dice</param>
+    /// <returns>True if both dice have the same value</returns>
+    public bool AreDiceMatching(int firstDiceValue, int secondDiceValue)
+    {
+        return firstDiceValue == secondDiceValue;
+    }
+    
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {

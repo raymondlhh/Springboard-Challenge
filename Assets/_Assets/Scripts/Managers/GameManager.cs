@@ -32,6 +32,7 @@ public class GameManager : MonoBehaviour
     private float lastCheckTime = 0f;
     private StockManager keyboardManager;
     private bool isProcessingDiceResult = false;
+    private bool shouldGrantExtraTurnForMatchingDice = false; // Flag to grant extra turn when both dice match
     
     public int DiceSum => diceSum;
     public bool IsRolling => isRolling;
@@ -234,6 +235,9 @@ public class GameManager : MonoBehaviour
     {
         // Unsubscribe from old player
         UnsubscribeFromPlayerEvents();
+        
+        // Reset extra turn flag when player changes
+        shouldGrantExtraTurnForMatchingDice = false;
         
         // Subscribe to new player
         SubscribeToCurrentPlayerEvents();
@@ -510,6 +514,20 @@ public class GameManager : MonoBehaviour
                 {
                     diceSum = firstDice.CurrentValue + secondDice.CurrentValue;
                     
+                    // Check if both dice have the same value (matching dice)
+                    if (diceManager != null && diceManager.AreDiceMatching(firstDice.CurrentValue, secondDice.CurrentValue))
+                    {
+                        shouldGrantExtraTurnForMatchingDice = true;
+                        Debug.Log($"=== MATCHING DICE! ===\n" +
+                                $"Both dice show: {firstDice.CurrentValue}\n" +
+                                $"Player will get an extra turn!\n" +
+                                $"========================");
+                    }
+                    else
+                    {
+                        shouldGrantExtraTurnForMatchingDice = false;
+                    }
+                    
                     // Display the dice sum prominently
                     string message = $"=== DICE ROLL RESULT ===\n" +
                                    $"First Dice: {firstDice.CurrentValue}\n" +
@@ -725,7 +743,23 @@ public class GameManager : MonoBehaviour
         PlayerController currentPlayerCtrl = GetCurrentPlayerController();
         string currentWaypointName = currentPlayerCtrl != null ? currentPlayerCtrl.GetCurrentWaypointName() : string.Empty;
         
-        // PRIORITY 0: Check if player landed on Path33_FortuneRoad - grant extra turn with one dice
+        // PRIORITY 0: Check if player should get extra turn for matching dice
+        if (shouldGrantExtraTurnForMatchingDice)
+        {
+            Debug.Log($"[GameManager] Player rolled matching dice! Granting extra turn.");
+            
+            // Reset the flag
+            shouldGrantExtraTurnForMatchingDice = false;
+            
+            // Spawn dice and keep the same player's turn (don't switch)
+            SpawnDice();
+            isProcessingDiceResult = false;
+            
+            Debug.Log($"[GameManager] Extra turn granted for matching dice. Player can roll again.");
+            return; // Don't switch to next player - same player gets another turn
+        }
+        
+        // PRIORITY 1: Check if player landed on Path33_FortuneRoad - grant extra turn with one dice
         if (!string.IsNullOrEmpty(currentWaypointName) && 
             currentWaypointName.Equals("Path33_FortuneRoad", System.StringComparison.OrdinalIgnoreCase))
         {
@@ -747,7 +781,7 @@ public class GameManager : MonoBehaviour
             return; // Don't switch to next player - same player gets another turn
         }
         
-        // PRIORITY 1: Check if this is a Stock path (handled by StockPathManager)
+        // PRIORITY 2: Check if this is a Stock path (handled by StockPathManager)
         // Stock paths activate the StockMarket and must complete before switching players
         bool isStockPath = false;
         if (stockPathManager != null && !string.IsNullOrEmpty(currentWaypointName))

@@ -33,8 +33,8 @@ public class PlayerManager : MonoBehaviour
     [Tooltip("Material for each player's UI and items. Element 0 = Player 1, Element 1 = Player 2, etc. Will be assigned to PlayerUI UpperBanner Image and PlayerItem Mesh Renderer.")]
     [SerializeField] private List<Material> playerItemMaterials = new List<Material>();
     
-    [Header("Player Name Texts (Auto-Assign)")]
     [Tooltip("NameText UI elements for each player. Can be manually assigned or auto-populated when players are spawned.")]
+    [HideInInspector]
     [SerializeField] private List<TextMeshProUGUI> playerNameTexts = new List<TextMeshProUGUI>();
     
     [Header("Player Spawn Settings")]
