@@ -497,6 +497,9 @@ public class CardsManager : MonoBehaviour
             
             Debug.Log($"[CardsManager] ===== Player {playerName} stopped at path: '{waypointName}' =====");
             
+            // Get GameManager reference once for use throughout this method
+            GameManager gameManager = FindAnyObjectByType<GameManager>();
+            
             // PRIORITY 1: Check if this is a Stock path (handled by StockPathManager)
             // StockPathManager handles its own subscription to player movement events,
             // so we just need to skip card spawning for stock paths
@@ -555,7 +558,6 @@ public class CardsManager : MonoBehaviour
                         // Owner visiting their own property - no card spawn, no income (they already have the monthly income)
                         Debug.Log($"[CardsManager] Property at path '{waypointName}' is owned by current player {playerName}. No card spawn, no visit income.");
                         // Spawn dice
-                        GameManager gameManager = FindAnyObjectByType<GameManager>();
                         if (gameManager != null)
                         {
                             gameManager.SpawnDice();
@@ -565,7 +567,16 @@ public class CardsManager : MonoBehaviour
                 }
             }
             
-            // PRIORITY 4: Only spawn card if one should be spawned for this path
+            // PRIORITY 4: Check if cards can spawn (IsFirstRound check)
+            if (gameManager != null && !gameManager.CanSpawnCards())
+            {
+                Debug.Log($"[CardsManager] IsFirstRound is enabled and player hasn't passed Path01_Start yet. Skipping card spawn for path: '{waypointName}' (Player: {playerName})");
+                // Spawn dice to continue the game
+                gameManager.SpawnDice();
+                return;
+            }
+            
+            // PRIORITY 5: Only spawn card if one should be spawned for this path
             bool willSpawn = WillSpawnCardForPath(waypointName);
             if (willSpawn)
             {
@@ -1172,6 +1183,23 @@ public class CardsManager : MonoBehaviour
             return;
         }
         
+        // Check if cards can spawn (IsFirstRound check)
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null && !gameManager.CanSpawnCards())
+        {
+            Debug.LogWarning($"IsFirstRound is enabled and player hasn't passed Path01_Start yet. Real estate event will not activate for: {currentRealEstatePathName}");
+            // Destroy the card and spawn dice
+            if (cardController != null)
+            {
+                cardController.DestroyCard();
+            }
+            isCardAnimating = false;
+            currentRealEstateCard = null;
+            currentRealEstatePathName = null;
+            gameManager.SpawnDice();
+            return;
+        }
+        
         // Extract property name from path (e.g., "Path11_RealEstate03" -> "RealEstate03")
         string categoryName = ExtractCategoryFromPath(currentRealEstatePathName);
         
@@ -1290,6 +1318,23 @@ public class CardsManager : MonoBehaviour
         if (string.IsNullOrEmpty(currentBusinessPathName))
         {
             Debug.LogError("Business path name is empty!");
+            return;
+        }
+        
+        // Check if cards can spawn (IsFirstRound check)
+        GameManager gameManager = FindAnyObjectByType<GameManager>();
+        if (gameManager != null && !gameManager.CanSpawnCards())
+        {
+            Debug.LogWarning($"IsFirstRound is enabled and player hasn't passed Path01_Start yet. Business event will not activate for: {currentBusinessPathName}");
+            // Destroy the card and spawn dice
+            if (cardController != null)
+            {
+                cardController.DestroyCard();
+            }
+            isCardAnimating = false;
+            currentBusinessCard = null;
+            currentBusinessPathName = null;
+            gameManager.SpawnDice();
             return;
         }
         

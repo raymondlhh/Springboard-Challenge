@@ -414,6 +414,7 @@ MonoBehaviour:
   cardsManager: {fileID: 324961890}
   stockPathManager: {fileID: 835444306}
   stockUI: {fileID: 582922567}
+  IsFirstRound: 1
 --- !u!1 &37908566
 GameObject:
   m_ObjectHideFlags: 0
@@ -3432,7 +3433,7 @@ MonoBehaviour:
   businessData: {fileID: 11400000, guid: a37f24906d335f649a4873517c8e474b, type: 2}
   businessUIController: {fileID: 187597861}
   marketWatchData: {fileID: 11400000, guid: 73e5a9c1933a03c4784577182410bc29, type: 2}
-  marketWatchUIController: {fileID: 0}
+  marketWatchUIController: {fileID: 187597862}
 --- !u!1 &327390196
 GameObject:
   m_ObjectHideFlags: 0

@@ -23,6 +23,10 @@ public class GameManager : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private GameObject stockUI;
     
+    [Header("Game Settings")]
+    [Tooltip("If true, cards will only spawn after a player passes through Path01_Start. Real estate and business events will not activate until Path01_Start is passed.")]
+    [SerializeField] private bool IsFirstRound = false;
+    
     private int diceSum = 0;
     private bool isRolling = false;
     private float lastCheckTime = 0f;
@@ -32,6 +36,7 @@ public class GameManager : MonoBehaviour
     private bool isDiceMeterActive = false; // Track if DiceMeter is currently active (for second method)
     private bool canInteractWithDiceMeter = false; // Track if player can interact with DiceMeter (after 2-second timer)
     private Coroutine diceMeterTimerCoroutine = null; // Coroutine for the 2-second timer
+    private bool hasPassedPath01Start = false; // Track if any player has passed through Path01_Start
     private int firstDiceValue = 0; // Store dice values for second method
     private int secondDiceValue = 0; // Store dice values for second method
     
@@ -1224,6 +1229,9 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void OnPlayerPassedPath01Start()
     {
+        // Mark that Path01_Start has been passed
+        hasPassedPath01Start = true;
+        
         PlayerFinance currentPlayerFinance = GetCurrentPlayerFinance();
         if (currentPlayerFinance != null)
         {
@@ -1234,6 +1242,21 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogWarning("PlayerFinance not found! Cannot add payday to cash.");
         }
+    }
+    
+    /// <summary>
+    /// Checks if cards can spawn based on IsFirstRound and Path01_Start status
+    /// </summary>
+    public bool CanSpawnCards()
+    {
+        // If IsFirstRound is false, cards can always spawn
+        if (!IsFirstRound)
+        {
+            return true;
+        }
+        
+        // If IsFirstRound is true, cards can only spawn after Path01_Start has been passed
+        return hasPassedPath01Start;
     }
     
     private void OnPlayerMovementComplete()
