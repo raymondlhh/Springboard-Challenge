@@ -72,7 +72,7 @@ Material:
     - _Cull: 2
     - _DstBlend: 10
     - _Fuzziness: 0
-    - _HueRange: 0.4
+    - _HueRange: 0.5
     - _QueueControl: 0
     - _QueueOffset: 0
     - _SrcBlend: 5
@@ -88,7 +88,7 @@ Material:
     - _ZWrite: 0
     - _ZWriteControl: 0
     m_Colors:
-    - _ChromaKeyColor: {r: 0, g: 0.59607846, b: 0.08235294, a: 1}
+    - _ChromaKeyColor: {r: 0.003921569, g: 0.59607846, b: 0.08627451, a: 1}
     - _ClipRect: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

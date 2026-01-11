@@ -1419,7 +1419,26 @@ public class CardsManager : MonoBehaviour
         
         if (card == null)
         {
-            Debug.LogWarning($"MarketWatch card data not found for: {categoryName}");
+            Debug.LogWarning($"MarketWatch card data not found for: {categoryName}. Skipping MarketWatch processing.");
+            
+            // Destroy the card since we can't process it
+            if (cardController != null)
+            {
+                cardController.DestroyCard();
+            }
+            
+            // Reset state and allow dice rolling again
+            isCardAnimating = false;
+            currentMarketWatchCard = null;
+            currentMarketWatchPathName = null;
+            
+            // Spawn dice to continue the game
+            GameManager gameManager = FindAnyObjectByType<GameManager>();
+            if (gameManager != null)
+            {
+                gameManager.SpawnDice();
+            }
+            
             return;
         }
         

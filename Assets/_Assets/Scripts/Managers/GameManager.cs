@@ -30,6 +30,8 @@ public class GameManager : MonoBehaviour
     private bool isProcessingDiceResult = false;
     private bool shouldGrantExtraTurnForMatchingDice = false; // Flag to grant extra turn when both dice match
     private bool isDiceMeterActive = false; // Track if DiceMeter is currently active (for second method)
+    private bool canInteractWithDiceMeter = false; // Track if player can interact with DiceMeter (after 2-second timer)
+    private Coroutine diceMeterTimerCoroutine = null; // Coroutine for the 2-second timer
     private int firstDiceValue = 0; // Store dice values for second method
     private int secondDiceValue = 0; // Store dice values for second method
     
@@ -209,13 +211,19 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void HandleSecondMethodInput()
     {
+        // Check if it's a human player's turn
+        bool isHumanTurn = playerManager == null || playerManager.IsHumanPlayerTurn();
+        
+        // Automatically show DiceMeter when CanRollDice becomes true (no click needed)
+        if (isHumanTurn && CanRollDice && !isDiceMeterActive && !isRolling)
+        {
+            ShowDiceMeter();
+        }
+        
         // Handle input for web (mouse click) and mobile (touch)
-        // Only allow rolling if it's a human player's turn
+        // Only allow interaction after 2-second timer has passed
         if ((Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)))
         {
-            // Check if it's a human player's turn
-            bool isHumanTurn = playerManager == null || playerManager.IsHumanPlayerTurn();
-            
             if (isHumanTurn && !CanRollDice)
             {
                 // Debug why dice cannot be rolled
@@ -230,17 +238,17 @@ public class GameManager : MonoBehaviour
                 else
                     Debug.Log("Cannot roll dice: Unknown reason");
             }
-            else if (isHumanTurn && CanRollDice)
+            else if (isHumanTurn && CanRollDice && isDiceMeterActive)
             {
-                if (!isDiceMeterActive)
+                // Only allow interaction if the 2-second timer has passed
+                if (canInteractWithDiceMeter)
                 {
-                    // First click: Show DiceMeter
-                    ShowDiceMeter();
+                    // Hide DiceMeter and roll dice
+                    HideDiceMeterAndRoll();
                 }
                 else
                 {
-                    // Second click: Hide DiceMeter and roll dice
-                    HideDiceMeterAndRoll();
+                    Debug.Log("Please wait for the dice meter video to play (2 seconds)");
                 }
             }
         }
@@ -286,8 +294,8 @@ public class GameManager : MonoBehaviour
     
     private IEnumerator DelayedRollForAI()
     {
-        // Wait a short time to show the meter
-        yield return new WaitForSeconds(0.5f);
+        // Wait for the 2-second timer to complete before allowing roll
+        yield return new WaitForSeconds(2f);
         HideDiceMeterAndRoll();
     }
     
@@ -300,8 +308,29 @@ public class GameManager : MonoBehaviour
         {
             diceManager.DiceMeter.SetActive(true);
             isDiceMeterActive = true;
-            Debug.Log("[GameManager] DiceMeter activated (Second Method)");
+            canInteractWithDiceMeter = false; // Reset interaction flag
+            
+            // Stop any existing timer coroutine
+            if (diceMeterTimerCoroutine != null)
+            {
+                StopCoroutine(diceMeterTimerCoroutine);
+            }
+            
+            // Start the 2-second timer
+            diceMeterTimerCoroutine = StartCoroutine(DiceMeterTimer());
+            
+            Debug.Log("[GameManager] DiceMeter activated (Second Method) - Wait 2 seconds before interaction");
         }
+    }
+    
+    /// <summary>
+    /// Coroutine that waits 2 seconds before allowing interaction with DiceMeter
+    /// </summary>
+    private IEnumerator DiceMeterTimer()
+    {
+        yield return new WaitForSeconds(2f);
+        canInteractWithDiceMeter = true;
+        Debug.Log("[GameManager] DiceMeter is now ready for interaction");
     }
     
     /// <summary>
@@ -313,6 +342,15 @@ public class GameManager : MonoBehaviour
         {
             diceManager.DiceMeter.SetActive(false);
             isDiceMeterActive = false;
+            canInteractWithDiceMeter = false; // Reset interaction flag
+            
+            // Stop the timer coroutine if it's still running
+            if (diceMeterTimerCoroutine != null)
+            {
+                StopCoroutine(diceMeterTimerCoroutine);
+                diceMeterTimerCoroutine = null;
+            }
+            
             Debug.Log("[GameManager] DiceMeter deactivated, starting roll (Second Method)");
         }
         
@@ -719,6 +757,15 @@ public class GameManager : MonoBehaviour
             // Second method doesn't spawn dice, just ensure videos are hidden
             HideDiceVideo();
             isDiceMeterActive = false;
+            canInteractWithDiceMeter = false; // Reset interaction flag
+            
+            // Stop the timer coroutine if it's still running
+            if (diceMeterTimerCoroutine != null)
+            {
+                StopCoroutine(diceMeterTimerCoroutine);
+                diceMeterTimerCoroutine = null;
+            }
+            
             if (diceManager.DiceMeter != null)
             {
                 diceManager.DiceMeter.SetActive(false);
