@@ -128,6 +128,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7175371}
+  - component: {fileID: 7175372}
   m_Layer: 0
   m_Name: DiceManager
   m_TagString: Untagged
@@ -152,6 +153,23 @@ Transform:
   - {fileID: 1059604075}
   m_Father: {fileID: 666819863}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7175372
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7175370}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a6fded0286b4384b8f4bb36f1cfd095, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  firstSpawner: {fileID: 241609133}
+  secondSpawner: {fileID: 1305781112}
+  oneDiceSpawner: {fileID: 1225757851}
+  diceCheckInterval: 0.1
+  dicePrefab: {fileID: 512676549986405767, guid: 133e4974bd8608147bcc3880ae313a26, type: 3}
 --- !u!1 &19521629
 GameObject:
   m_ObjectHideFlags: 0
@@ -363,17 +381,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57a466687c06be5449a6722c7f5e13eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  firstSpawner: {fileID: 241609133}
-  secondSpawner: {fileID: 1305781112}
-  oneDiceSpawner: {fileID: 1225757851}
-  dicePrefab: {fileID: 512676549986405767, guid: 133e4974bd8608147bcc3880ae313a26, type: 3}
-  diceCheckInterval: 0.5
-  IsDebugging: 0
-  debugFixedSteps: 3
+  diceManager: {fileID: 7175372}
+  IsDebugging: 1
+  debugFixedSteps: 4
   playerManager: {fileID: 1152732730}
   cardsManager: {fileID: 324961890}
   stockPathManager: {fileID: 835444306}
-  miniGamesUI: {fileID: 582922567}
+  stockUI: {fileID: 582922567}
 --- !u!1 &37908566
 GameObject:
   m_ObjectHideFlags: 0
@@ -4689,7 +4703,7 @@ GameObject:
   m_Component:
   - component: {fileID: 582922568}
   m_Layer: 5
-  m_Name: StocksUI
+  m_Name: StockUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8661,7 +8675,7 @@ MonoBehaviour:
   - 6600
   - 6600
   - 6600
-  playerIsAI: 01010101
+  playerIsAI: 00000000
   playerPurchaseProbability:
   - 1
   - 1
@@ -9585,7 +9599,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1225757851}
   m_Layer: 0
-  m_Name: FirstSpawner
+  m_Name: OneDiceSpawner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

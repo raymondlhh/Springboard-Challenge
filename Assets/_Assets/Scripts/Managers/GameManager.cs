@@ -3,18 +3,12 @@ using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
-    [Header("Spawner References")]
-    [SerializeField] private Transform firstSpawner;
-    [SerializeField] private Transform secondSpawner;
-    [SerializeField] private Transform oneDiceSpawner; // Spawner for one dice mode (OneDice/FirstSpawner)
+    [Header("Dice Manager Reference")]
+    [SerializeField] private DiceManager diceManager;
     
     [Header("Dice References")]
     private DiceController firstDice; // Managed internally, not shown in Inspector
     private DiceController secondDice; // Managed internally, not shown in Inspector
-    [SerializeField] private GameObject dicePrefab;
-    
-    [Header("Dice Settings")]
-    [SerializeField] private float diceCheckInterval = 0.1f;
     
     [Header("Debug Settings")]
     [SerializeField] private bool IsDebugging = false; // Enable debug mode to use fixed movement steps
@@ -31,7 +25,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private StockPathManager stockPathManager;
     
     [Header("UI References")]
-    [SerializeField] private GameObject miniGamesUI;
+    [SerializeField] private GameObject stockUI;
     
     private int diceSum = 0;
     private bool isRolling = false;
@@ -50,16 +44,10 @@ public class GameManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        // Find spawners if not assigned
-        if (firstSpawner == null || secondSpawner == null)
+        // Find DiceManager if not assigned
+        if (diceManager == null)
         {
-            FindSpawners();
-        }
-        
-        // Load dice prefab if not assigned
-        if (dicePrefab == null)
-        {
-            LoadDicePrefab();
+            diceManager = FindAnyObjectByType<DiceManager>();
         }
         
         // Find PlayerManager if not assigned
@@ -96,26 +84,26 @@ public class GameManager : MonoBehaviour
         SubscribeToCurrentPlayerEvents();
         
         // Find and hide MiniGamesUI at start
-        if (miniGamesUI == null)
+        if (stockUI == null)
         {
             GameObject miniGamesUIObj = GameObject.Find("MiniGamesUI");
             if (miniGamesUIObj != null)
             {
-                miniGamesUI = miniGamesUIObj;
+                stockUI = miniGamesUIObj;
             }
         }
         
         // Hide MiniGamesUI at start
-        if (miniGamesUI != null)
+        if (stockUI != null)
         {
-            miniGamesUI.SetActive(false);
+            stockUI.SetActive(false);
         }
     }
     
     private bool IsMiniGameActive()
     {
         // Check if MiniGamesUI is active (use activeInHierarchy to account for parent inactive state)
-        if (miniGamesUI != null && miniGamesUI.activeInHierarchy)
+        if (stockUI != null && stockUI.activeInHierarchy)
         {
             Debug.Log("Dice blocked: MiniGamesUI is active");
             return true;
@@ -176,7 +164,7 @@ public class GameManager : MonoBehaviour
         }
         
         // Check if dice have finished rolling
-        if (isRolling && Time.time - lastCheckTime >= diceCheckInterval)
+        if (isRolling && diceManager != null && Time.time - lastCheckTime >= diceManager.DiceCheckInterval)
         {
             lastCheckTime = Time.time;
             
@@ -279,99 +267,54 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    private void FindSpawners()
-    {
-        // Try to find spawners by name
-        GameObject firstSpawnerObj = GameObject.Find("FirstSpawner");
-        GameObject secondSpawnerObj = GameObject.Find("SecondSpawner");
-        
-        // Try to find OneDice/FirstSpawner for one dice mode
-        GameObject oneDiceParent = GameObject.Find("OneDice");
-        if (oneDiceParent != null)
-        {
-            Transform oneDiceFirstSpawner = oneDiceParent.transform.Find("FirstSpawner");
-            if (oneDiceFirstSpawner != null)
-            {
-                oneDiceSpawner = oneDiceFirstSpawner;
-            }
-        }
-        
-        // Fallback: try to find OneDice/FirstSpawner directly
-        if (oneDiceSpawner == null)
-        {
-            Transform oneDiceFirstSpawner = GameObject.Find("OneDice/FirstSpawner")?.transform;
-            if (oneDiceFirstSpawner != null)
-            {
-                oneDiceSpawner = oneDiceFirstSpawner;
-            }
-        }
-        
-        if (firstSpawnerObj != null)
-        {
-            firstSpawner = firstSpawnerObj.transform;
-        }
-        
-        if (secondSpawnerObj != null)
-        {
-            secondSpawner = secondSpawnerObj.transform;
-        }
-    }
-    
-    private void LoadDicePrefab()
-    {
-        // Try to load dice prefab from Resources folder
-        // Note: The prefab must be in a "Resources" folder for this to work at runtime
-        dicePrefab = Resources.Load<GameObject>("Dice");
-        
-        // If still null, the prefab should be assigned in the Inspector
-        // or placed in a Resources folder
-        if (dicePrefab == null)
-        {
-            Debug.LogWarning("Dice Prefab not found! Please assign it in the Inspector or place it in a Resources folder.");
-        }
-    }
     
     public void SpawnDice()
     {
+        if (diceManager == null)
+        {
+            Debug.LogError("DiceManager is not assigned! Cannot spawn dice.");
+            return;
+        }
+        
         // Check if current player should use one dice (after stopping on Fortune Road)
         PlayerController currentPlayerCtrl = GetCurrentPlayerController();
         bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
         
-        if (useOneDice && oneDiceSpawner != null)
+        if (useOneDice && diceManager.OneDiceSpawner != null)
         {
             // One dice mode: spawn only one dice at OneDice/FirstSpawner
             Debug.Log("Spawning one dice at OneDice/FirstSpawner (Fortune Road mode)");
             
             // Destroy all existing dice from both spawners
-            if (firstSpawner != null)
+            if (diceManager.FirstSpawner != null)
             {
-                for (int i = firstSpawner.childCount - 1; i >= 0; i--)
+                for (int i = diceManager.FirstSpawner.childCount - 1; i >= 0; i--)
                 {
-                    Destroy(firstSpawner.GetChild(i).gameObject);
+                    Destroy(diceManager.FirstSpawner.GetChild(i).gameObject);
                 }
             }
             
-            if (secondSpawner != null)
+            if (diceManager.SecondSpawner != null)
             {
-                for (int i = secondSpawner.childCount - 1; i >= 0; i--)
+                for (int i = diceManager.SecondSpawner.childCount - 1; i >= 0; i--)
                 {
-                    Destroy(secondSpawner.GetChild(i).gameObject);
+                    Destroy(diceManager.SecondSpawner.GetChild(i).gameObject);
                 }
             }
             
             // Destroy any existing dice from one dice spawner
-            if (oneDiceSpawner != null)
+            if (diceManager.OneDiceSpawner != null)
             {
-                for (int i = oneDiceSpawner.childCount - 1; i >= 0; i--)
+                for (int i = diceManager.OneDiceSpawner.childCount - 1; i >= 0; i--)
                 {
-                    Destroy(oneDiceSpawner.GetChild(i).gameObject);
+                    Destroy(diceManager.OneDiceSpawner.GetChild(i).gameObject);
                 }
             }
             
             // Spawn one dice at OneDice/FirstSpawner
-            if (dicePrefab != null && oneDiceSpawner != null)
+            if (diceManager.DicePrefab != null && diceManager.OneDiceSpawner != null)
             {
-                GameObject spawnedDice = Instantiate(dicePrefab, oneDiceSpawner.position, oneDiceSpawner.rotation, oneDiceSpawner);
+                GameObject spawnedDice = Instantiate(diceManager.DicePrefab, diceManager.OneDiceSpawner.position, diceManager.OneDiceSpawner.rotation, diceManager.OneDiceSpawner);
                 spawnedDice.name = "FirstDice";
                 firstDice = spawnedDice.GetComponent<DiceController>();
                 
@@ -392,18 +335,18 @@ public class GameManager : MonoBehaviour
         {
             // Normal mode: spawn two dice
             // Remove any existing dice from first spawner
-            if (firstSpawner != null)
+            if (diceManager.FirstSpawner != null)
             {
                 // Destroy all children (existing dice)
-                for (int i = firstSpawner.childCount - 1; i >= 0; i--)
+                for (int i = diceManager.FirstSpawner.childCount - 1; i >= 0; i--)
                 {
-                    Destroy(firstSpawner.GetChild(i).gameObject);
+                    Destroy(diceManager.FirstSpawner.GetChild(i).gameObject);
                 }
                 
                 // Spawn new dice at first spawner
-                if (dicePrefab != null)
+                if (diceManager.DicePrefab != null)
                 {
-                    GameObject spawnedDice = Instantiate(dicePrefab, firstSpawner.position, firstSpawner.rotation, firstSpawner);
+                    GameObject spawnedDice = Instantiate(diceManager.DicePrefab, diceManager.FirstSpawner.position, diceManager.FirstSpawner.rotation, diceManager.FirstSpawner);
                     spawnedDice.name = "FirstDice";
                     firstDice = spawnedDice.GetComponent<DiceController>();
                     
@@ -419,18 +362,18 @@ public class GameManager : MonoBehaviour
             }
             
             // Remove any existing dice from second spawner
-            if (secondSpawner != null)
+            if (diceManager.SecondSpawner != null)
             {
                 // Destroy all children (existing dice)
-                for (int i = secondSpawner.childCount - 1; i >= 0; i--)
+                for (int i = diceManager.SecondSpawner.childCount - 1; i >= 0; i--)
                 {
-                    Destroy(secondSpawner.GetChild(i).gameObject);
+                    Destroy(diceManager.SecondSpawner.GetChild(i).gameObject);
                 }
                 
                 // Spawn new dice at second spawner
-                if (dicePrefab != null)
+                if (diceManager.DicePrefab != null)
                 {
-                    GameObject spawnedDice = Instantiate(dicePrefab, secondSpawner.position, secondSpawner.rotation, secondSpawner);
+                    GameObject spawnedDice = Instantiate(diceManager.DicePrefab, diceManager.SecondSpawner.position, diceManager.SecondSpawner.rotation, diceManager.SecondSpawner);
                     spawnedDice.name = "SecondDice";
                     secondDice = spawnedDice.GetComponent<DiceController>();
                     
@@ -449,15 +392,20 @@ public class GameManager : MonoBehaviour
     
     private void FindDice()
     {
-        // Try to find dice in spawners first
-        if (firstSpawner != null)
+        if (diceManager == null)
         {
-            firstDice = firstSpawner.GetComponentInChildren<DiceController>();
+            return;
         }
         
-        if (secondSpawner != null)
+        // Try to find dice in spawners first
+        if (diceManager.FirstSpawner != null)
         {
-            secondDice = secondSpawner.GetComponentInChildren<DiceController>();
+            firstDice = diceManager.FirstSpawner.GetComponentInChildren<DiceController>();
+        }
+        
+        if (diceManager.SecondSpawner != null)
+        {
+            secondDice = diceManager.SecondSpawner.GetComponentInChildren<DiceController>();
         }
         
         // Fallback: Try to find dice by name
@@ -653,11 +601,17 @@ public class GameManager : MonoBehaviour
         
         Vector3 firstDiceStartPos = firstDice.transform.position;
         
+        if (diceManager == null)
+        {
+            Debug.LogWarning("DiceManager is null! Cannot move dice to spawners.");
+            yield break;
+        }
+        
         // Determine target spawner for first dice
         Transform firstTargetSpawner = null;
         if (useOneDice)
         {
-            firstTargetSpawner = oneDiceSpawner != null ? oneDiceSpawner : firstSpawner;
+            firstTargetSpawner = diceManager.OneDiceSpawner != null ? diceManager.OneDiceSpawner : diceManager.FirstSpawner;
             if (firstTargetSpawner == null)
             {
                 Debug.LogWarning("One dice spawner and first spawner are both null! Using dice current position.");
@@ -670,20 +624,20 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            firstTargetSpawner = firstSpawner != null ? firstSpawner : firstDice.transform;
+            firstTargetSpawner = diceManager.FirstSpawner != null ? diceManager.FirstSpawner : firstDice.transform;
         }
         
         Vector3 firstDiceTargetPos = firstTargetSpawner.position;
         Quaternion firstDiceStartRot = firstDice.transform.rotation;
         
         Vector3 secondDiceStartPos = secondDice != null ? secondDice.transform.position : Vector3.zero;
-        Vector3 secondDiceTargetPos = secondSpawner != null ? secondSpawner.position : secondDiceStartPos;
+        Vector3 secondDiceTargetPos = diceManager.SecondSpawner != null ? diceManager.SecondSpawner.position : secondDiceStartPos;
         Quaternion secondDiceStartRot = secondDice != null ? secondDice.transform.rotation : Quaternion.identity;
         
         // Calculate target rotations to show the rolled values on top
         // Get the base spawner rotations (firstTargetSpawner was already determined above)
         Quaternion firstSpawnerBaseRot = firstTargetSpawner != null ? firstTargetSpawner.rotation : Quaternion.identity;
-        Quaternion secondSpawnerBaseRot = secondSpawner != null ? secondSpawner.rotation : Quaternion.identity;
+        Quaternion secondSpawnerBaseRot = diceManager.SecondSpawner != null ? diceManager.SecondSpawner.rotation : Quaternion.identity;
         
         // Calculate rotation needed to show first dice value on top
         Quaternion firstDiceValueRot = firstDice != null ? firstDice.GetRotationForValueOnTop(firstDice.CurrentValue) : Quaternion.identity;
