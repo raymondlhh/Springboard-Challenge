@@ -7,6 +7,9 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private Transform secondSpawner;
     [SerializeField] private Transform oneDiceSpawner; // Spawner for one dice mode (OneDice/FirstSpawner)
     
+    [Header("Dice Method Selection")]
+    [SerializeField] private bool IsSecondMethod = false; // If true, use video-based dice method instead of spawning physical dice
+    
     [Header("Dice Settings")]
     [SerializeField] private float diceCheckInterval = 0.1f;
     [SerializeField] private GameObject dicePrefab;
@@ -14,6 +17,12 @@ public class DiceManager : MonoBehaviour
     [Header("Debug Settings")]
     [SerializeField] private bool IsDebugging = false; // Enable debug mode to use fixed movement steps
     [SerializeField] private int debugFixedSteps = 1; // Fixed number of steps to move when IsDebugging is true
+    
+    [Header("Video Player References (Second Method)")]
+    [SerializeField] private GameObject diceMeter; // The DiceMeter video player object
+    [SerializeField] private GameObject[] doubleVideoPlayers; // Array for double rolls: double_no2_1+1, double_no4_2+2, etc.
+    [SerializeField] private GameObject[] singleVideoPlayers; // Array for single dice: single_no1 to single_no6
+    [SerializeField] private GameObject[] nonDoubleVideoPlayers; // Array for non-double two dice: no3_1+2, no4_1+3, etc.
     
     // Public properties to access spawners and settings
     public Transform FirstSpawner => firstSpawner;
@@ -23,6 +32,11 @@ public class DiceManager : MonoBehaviour
     public GameObject DicePrefab => dicePrefab;
     public bool IsDebuggingEnabled => IsDebugging;
     public int DebugFixedSteps => debugFixedSteps;
+    public bool UseSecondMethod => IsSecondMethod;
+    public GameObject DiceMeter => diceMeter;
+    public GameObject[] DoubleVideoPlayers => doubleVideoPlayers;
+    public GameObject[] SingleVideoPlayers => singleVideoPlayers;
+    public GameObject[] NonDoubleVideoPlayers => nonDoubleVideoPlayers;
     
     /// <summary>
     /// Checks if both dice have the same value (only valid in two dice mode)

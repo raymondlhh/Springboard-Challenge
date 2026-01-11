@@ -29,6 +29,9 @@ public class GameManager : MonoBehaviour
     private StockManager keyboardManager;
     private bool isProcessingDiceResult = false;
     private bool shouldGrantExtraTurnForMatchingDice = false; // Flag to grant extra turn when both dice match
+    private bool isDiceMeterActive = false; // Track if DiceMeter is currently active (for second method)
+    private int firstDiceValue = 0; // Store dice values for second method
+    private int secondDiceValue = 0; // Store dice values for second method
     
     public int DiceSum => diceSum;
     public bool IsRolling => isRolling;
@@ -127,6 +130,26 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Check which dice method to use
+        bool useSecondMethod = diceManager != null && diceManager.UseSecondMethod;
+        
+        if (useSecondMethod)
+        {
+            // Second Method: Video-based dice
+            HandleSecondMethodInput();
+        }
+        else
+        {
+            // First Method: Physical dice spawning
+            HandleFirstMethodInput();
+        }
+    }
+    
+    /// <summary>
+    /// Handles input for the first method (physical dice spawning)
+    /// </summary>
+    private void HandleFirstMethodInput()
+    {
         // Handle input for web (mouse click) and mobile (touch)
         // Only allow rolling if it's a human player's turn
         if ((Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)))
@@ -182,7 +205,55 @@ public class GameManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Auto-roll dice for AI players
+    /// Handles input for the second method (video-based dice)
+    /// </summary>
+    private void HandleSecondMethodInput()
+    {
+        // Handle input for web (mouse click) and mobile (touch)
+        // Only allow rolling if it's a human player's turn
+        if ((Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)))
+        {
+            // Check if it's a human player's turn
+            bool isHumanTurn = playerManager == null || playerManager.IsHumanPlayerTurn();
+            
+            if (isHumanTurn && !CanRollDice)
+            {
+                // Debug why dice cannot be rolled
+                if (isRolling)
+                    Debug.Log("Cannot roll dice: Currently processing dice result");
+                else if (cardsManager != null && cardsManager.IsCardAnimating)
+                    Debug.Log("Cannot roll dice: Card is animating");
+                else if (GetCurrentPlayerController() != null && GetCurrentPlayerController().IsMoving)
+                    Debug.Log("Cannot roll dice: Player is moving");
+                else if (IsMiniGameActive())
+                    Debug.Log("Cannot roll dice: Mini game is active");
+                else
+                    Debug.Log("Cannot roll dice: Unknown reason");
+            }
+            else if (isHumanTurn && CanRollDice)
+            {
+                if (!isDiceMeterActive)
+                {
+                    // First click: Show DiceMeter
+                    ShowDiceMeter();
+                }
+                else
+                {
+                    // Second click: Hide DiceMeter and roll dice
+                    HideDiceMeterAndRoll();
+                }
+            }
+        }
+        
+        // Auto-roll for AI players
+        if (playerManager != null && playerManager.IsAIPlayerTurn() && CanRollDice && !isRolling)
+        {
+            StartCoroutine(AutoRollForAI_SecondMethod());
+        }
+    }
+    
+    /// <summary>
+    /// Auto-roll dice for AI players (First Method)
     /// </summary>
     private IEnumerator AutoRollForAI()
     {
@@ -194,6 +265,378 @@ public class GameManager : MonoBehaviour
         yield return StartCoroutine(playerManager.CurrentPlayer.AIController.RollDice(() => {
             RollDice();
         }));
+    }
+    
+    /// <summary>
+    /// Auto-roll dice for AI players (Second Method)
+    /// </summary>
+    private IEnumerator AutoRollForAI_SecondMethod()
+    {
+        if (playerManager == null || playerManager.CurrentPlayer == null || playerManager.CurrentPlayer.AIController == null)
+        {
+            yield break;
+        }
+        
+        yield return StartCoroutine(playerManager.CurrentPlayer.AIController.RollDice(() => {
+            // Simulate click: show meter, wait a bit, then roll
+            ShowDiceMeter();
+            StartCoroutine(DelayedRollForAI());
+        }));
+    }
+    
+    private IEnumerator DelayedRollForAI()
+    {
+        // Wait a short time to show the meter
+        yield return new WaitForSeconds(0.5f);
+        HideDiceMeterAndRoll();
+    }
+    
+    /// <summary>
+    /// Shows the DiceMeter video player (Second Method)
+    /// </summary>
+    private void ShowDiceMeter()
+    {
+        if (diceManager != null && diceManager.DiceMeter != null)
+        {
+            diceManager.DiceMeter.SetActive(true);
+            isDiceMeterActive = true;
+            Debug.Log("[GameManager] DiceMeter activated (Second Method)");
+        }
+    }
+    
+    /// <summary>
+    /// Hides DiceMeter and starts the dice roll (Second Method)
+    /// </summary>
+    private void HideDiceMeterAndRoll()
+    {
+        if (diceManager != null && diceManager.DiceMeter != null)
+        {
+            diceManager.DiceMeter.SetActive(false);
+            isDiceMeterActive = false;
+            Debug.Log("[GameManager] DiceMeter deactivated, starting roll (Second Method)");
+        }
+        
+        // Start the video-based dice roll
+        StartCoroutine(RollDice_SecondMethod());
+    }
+    
+    /// <summary>
+    /// Rolls dice using video players (Second Method)
+    /// </summary>
+    private IEnumerator RollDice_SecondMethod()
+    {
+        if (isRolling || isProcessingDiceResult)
+        {
+            yield break;
+        }
+        
+        isRolling = true;
+        diceSum = 0;
+        
+        // Play rolling dice sound effect
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX("RollingDice");
+        }
+        
+        // Check if we're using one dice mode
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
+        
+        // Generate random dice values
+        if (useOneDice)
+        {
+            firstDiceValue = Random.Range(1, 7); // 1-6
+            secondDiceValue = 0;
+            diceSum = firstDiceValue;
+        }
+        else
+        {
+            firstDiceValue = Random.Range(1, 7); // 1-6
+            secondDiceValue = Random.Range(1, 7); // 1-6
+            diceSum = firstDiceValue + secondDiceValue;
+        }
+        
+        Debug.Log($"[GameManager] Second Method - Rolled: First={firstDiceValue}, Second={secondDiceValue}, Sum={diceSum}");
+        
+        // Check if both dice match (for extra turn)
+        if (!useOneDice && diceManager != null && diceManager.AreDiceMatching(firstDiceValue, secondDiceValue))
+        {
+            shouldGrantExtraTurnForMatchingDice = true;
+            Debug.Log($"=== MATCHING DICE! ===\n" +
+                    $"Both dice show: {firstDiceValue}\n" +
+                    $"Player will get an extra turn!\n" +
+                    $"========================");
+        }
+        else
+        {
+            shouldGrantExtraTurnForMatchingDice = false;
+        }
+        
+        // Show the appropriate video
+        ShowDiceVideo(useOneDice, firstDiceValue, secondDiceValue);
+        
+        // Wait 5 seconds for the video to play
+        yield return new WaitForSeconds(5f);
+        
+        // Hide the video
+        HideDiceVideo();
+        
+        isRolling = false;
+        
+        // Process the dice result
+        yield return StartCoroutine(ProcessDiceResult_SecondMethod());
+    }
+    
+    /// <summary>
+    /// Shows the appropriate dice video based on the roll (Second Method)
+    /// </summary>
+    private void ShowDiceVideo(bool useOneDice, int firstValue, int secondValue)
+    {
+        if (diceManager == null)
+        {
+            Debug.LogWarning("DiceManager is null! Cannot show dice video.");
+            return;
+        }
+        
+        // First, hide all videos
+        HideDiceVideo();
+        
+        if (useOneDice)
+        {
+            // Single dice mode: show single_no1 to single_no6
+            if (diceManager.SingleVideoPlayers != null && firstValue >= 1 && firstValue <= 6)
+            {
+                int index = firstValue - 1; // Convert 1-6 to 0-5
+                if (index < diceManager.SingleVideoPlayers.Length && diceManager.SingleVideoPlayers[index] != null)
+                {
+                    diceManager.SingleVideoPlayers[index].SetActive(true);
+                    Debug.Log($"[GameManager] Showing single dice video: single_no{firstValue}");
+                }
+                else
+                {
+                    Debug.LogWarning($"Single video player at index {index} is null or out of range!");
+                }
+            }
+        }
+        else
+        {
+            // Two dice mode
+            bool isDouble = firstValue == secondValue;
+            
+            if (isDouble)
+            {
+                // Double roll: show double_no2_1+1, double_no4_2+2, etc.
+                // Mapping: 1+1=2, 2+2=4, 3+3=6, 4+4=8, 5+5=10, 6+6=12
+                int sum = firstValue + secondValue;
+                GameObject[] doubleVideos = diceManager.DoubleVideoPlayers;
+                
+                if (doubleVideos != null)
+                {
+                    bool found = false;
+                    
+                    // First, try to find exact match (sum and values)
+                    for (int i = 0; i < doubleVideos.Length; i++)
+                    {
+                        if (doubleVideos[i] != null)
+                        {
+                            string videoName = doubleVideos[i].name.ToLower();
+                            // Check if video name contains the sum and values
+                            if ((videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_")) &&
+                                (videoName.Contains($"{firstValue}+{secondValue}") || videoName.Contains($"{secondValue}+{firstValue}")))
+                            {
+                                doubleVideos[i].SetActive(true);
+                                Debug.Log($"[GameManager] Showing double dice video: {doubleVideos[i].name}");
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If exact match not found, fall back to sum-based matching
+                    if (!found)
+                    {
+                        for (int i = 0; i < doubleVideos.Length; i++)
+                        {
+                            if (doubleVideos[i] != null)
+                            {
+                                string videoName = doubleVideos[i].name.ToLower();
+                                // Match by sum only (e.g., no7_3+4 can match no7_5+2)
+                                if (videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_"))
+                                {
+                                    doubleVideos[i].SetActive(true);
+                                    Debug.Log($"[GameManager] Showing double dice video (sum fallback): {doubleVideos[i].name} for {firstValue}+{secondValue} (sum={sum})");
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (!found)
+                    {
+                        Debug.LogWarning($"Could not find matching double video for {firstValue}+{secondValue} (sum={sum})");
+                    }
+                }
+            }
+            else
+            {
+                // Non-double roll: show no3_1+2, no4_1+3, etc.
+                // Need to find the correct video based on sum and individual values
+                int sum = firstValue + secondValue;
+                GameObject[] nonDoubleVideos = diceManager.NonDoubleVideoPlayers;
+                
+                if (nonDoubleVideos != null)
+                {
+                    // First, try to find exact match (sum and values)
+                    // Videos: no3_1+2, no4_1+3, no5_2+3, no6_2+4, no7_3+4, no8_3+5, no9_4+5, no10_4+6, no11_5+6
+                    bool found = false;
+                    for (int i = 0; i < nonDoubleVideos.Length; i++)
+                    {
+                        if (nonDoubleVideos[i] != null)
+                        {
+                            string videoName = nonDoubleVideos[i].name.ToLower();
+                            // Check if video name contains the sum and values
+                            if ((videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_")) &&
+                                (videoName.Contains($"{firstValue}+{secondValue}") || videoName.Contains($"{secondValue}+{firstValue}")))
+                            {
+                                nonDoubleVideos[i].SetActive(true);
+                                Debug.Log($"[GameManager] Showing non-double dice video: {nonDoubleVideos[i].name}");
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If exact match not found, fall back to sum-based matching
+                    // (e.g., no7_3+4 can match no7_5+2 since both sum to 7)
+                    if (!found)
+                    {
+                        for (int i = 0; i < nonDoubleVideos.Length; i++)
+                        {
+                            if (nonDoubleVideos[i] != null)
+                            {
+                                string videoName = nonDoubleVideos[i].name.ToLower();
+                                // Match by sum only (e.g., no7_3+4 can match no7_5+2)
+                                if (videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_"))
+                                {
+                                    nonDoubleVideos[i].SetActive(true);
+                                    Debug.Log($"[GameManager] Showing non-double dice video (sum fallback): {nonDoubleVideos[i].name} for {firstValue}+{secondValue} (sum={sum})");
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (!found)
+                    {
+                        Debug.LogWarning($"Could not find matching non-double video for {firstValue}+{secondValue} (sum={sum})");
+                    }
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Hides all dice videos (Second Method)
+    /// </summary>
+    private void HideDiceVideo()
+    {
+        if (diceManager == null)
+        {
+            return;
+        }
+        
+        // Hide all double videos
+        if (diceManager.DoubleVideoPlayers != null)
+        {
+            foreach (GameObject video in diceManager.DoubleVideoPlayers)
+            {
+                if (video != null)
+                {
+                    video.SetActive(false);
+                }
+            }
+        }
+        
+        // Hide all single videos
+        if (diceManager.SingleVideoPlayers != null)
+        {
+            foreach (GameObject video in diceManager.SingleVideoPlayers)
+            {
+                if (video != null)
+                {
+                    video.SetActive(false);
+                }
+            }
+        }
+        
+        // Hide all non-double videos
+        if (diceManager.NonDoubleVideoPlayers != null)
+        {
+            foreach (GameObject video in diceManager.NonDoubleVideoPlayers)
+            {
+                if (video != null)
+                {
+                    video.SetActive(false);
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Processes dice result for second method
+    /// </summary>
+    private IEnumerator ProcessDiceResult_SecondMethod()
+    {
+        isProcessingDiceResult = true;
+        
+        // Display the dice result
+        PlayerController currentPlayerCtrl = GetCurrentPlayerController();
+        bool useOneDice = currentPlayerCtrl != null && currentPlayerCtrl.ShouldUseOneDice;
+        
+        if (useOneDice)
+        {
+            string message = $"=== DICE ROLL RESULT (ONE DICE - SECOND METHOD) ===\n" +
+                           $"Dice Value: {firstDiceValue}\n" +
+                           $"TOTAL SUM: {diceSum}\n" +
+                           $"========================";
+            Debug.Log(message);
+        }
+        else
+        {
+            string message = $"=== DICE ROLL RESULT (SECOND METHOD) ===\n" +
+                           $"First Dice: {firstDiceValue}\n" +
+                           $"Second Dice: {secondDiceValue}\n" +
+                           $"TOTAL SUM: {diceSum}\n" +
+                           $"========================";
+            Debug.Log(message);
+        }
+        
+        DisplayDiceSum();
+        
+        // Determine movement steps: use fixed value if debugging, otherwise use dice sum
+        int movementSteps = (diceManager != null && diceManager.IsDebuggingEnabled) ? diceManager.DebugFixedSteps : diceSum;
+        
+        // Log debug mode status if enabled
+        if (diceManager != null && diceManager.IsDebuggingEnabled)
+        {
+            Debug.Log($"DEBUG MODE: Using fixed steps ({diceManager.DebugFixedSteps}) instead of dice sum ({diceSum})");
+        }
+        
+        // Move current player based on calculated movement steps
+        if (currentPlayerCtrl != null && movementSteps > 0)
+        {
+            currentPlayerCtrl.OnDiceRollComplete(movementSteps);
+        }
+        else
+        {
+            Debug.LogWarning("Current player not found! Cannot move player.");
+            isProcessingDiceResult = false;
+        }
+        // Note: isProcessingDiceResult will be set to false in OnPlayerMovementComplete
+        yield return null;
     }
     
     /// <summary>
@@ -270,6 +713,19 @@ public class GameManager : MonoBehaviour
     
     public void SpawnDice()
     {
+        // Check if using second method - if so, don't spawn physical dice
+        if (diceManager != null && diceManager.UseSecondMethod)
+        {
+            // Second method doesn't spawn dice, just ensure videos are hidden
+            HideDiceVideo();
+            isDiceMeterActive = false;
+            if (diceManager.DiceMeter != null)
+            {
+                diceManager.DiceMeter.SetActive(false);
+            }
+            return;
+        }
+        
         if (diceManager == null)
         {
             Debug.LogError("DiceManager is not assigned! Cannot spawn dice.");
