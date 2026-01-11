@@ -10,10 +10,6 @@ public class GameManager : MonoBehaviour
     private DiceController firstDice; // Managed internally, not shown in Inspector
     private DiceController secondDice; // Managed internally, not shown in Inspector
     
-    [Header("Debug Settings")]
-    [SerializeField] private bool IsDebugging = false; // Enable debug mode to use fixed movement steps
-    [SerializeField] private int debugFixedSteps = 1; // Fixed number of steps to move when IsDebugging is true
-    
     [Header("Player Manager Reference")]
     [SerializeField] private PlayerManager playerManager;
     
@@ -548,7 +544,7 @@ public class GameManager : MonoBehaviour
             DisplayDiceSum();
             
             // Determine movement steps: use fixed value if debugging, otherwise use dice sum
-            int movementSteps = IsDebugging ? debugFixedSteps : diceSum;
+            int movementSteps = (diceManager != null && diceManager.IsDebuggingEnabled) ? diceManager.DebugFixedSteps : diceSum;
             
             // Always show dice: move them back to spawners, wait, then destroy
             // Move dice back to their spawners and show them
@@ -579,9 +575,9 @@ public class GameManager : MonoBehaviour
             }
             
             // Log debug mode status if enabled
-            if (IsDebugging)
+            if (diceManager != null && diceManager.IsDebuggingEnabled)
             {
-                Debug.Log($"DEBUG MODE: Using fixed steps ({debugFixedSteps}) instead of dice sum ({diceSum})");
+                Debug.Log($"DEBUG MODE: Using fixed steps ({diceManager.DebugFixedSteps}) instead of dice sum ({diceSum})");
             }
             
             // Move current player based on calculated movement steps

@@ -382,7 +382,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   diceManager: {fileID: 7175372}
-  IsDebugging: 1
+  IsDebugging: 0
   debugFixedSteps: 4
   playerManager: {fileID: 1152732730}
   cardsManager: {fileID: 324961890}

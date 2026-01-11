@@ -11,12 +11,18 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private float diceCheckInterval = 0.1f;
     [SerializeField] private GameObject dicePrefab;
     
+    [Header("Debug Settings")]
+    [SerializeField] private bool IsDebugging = false; // Enable debug mode to use fixed movement steps
+    [SerializeField] private int debugFixedSteps = 1; // Fixed number of steps to move when IsDebugging is true
+    
     // Public properties to access spawners and settings
     public Transform FirstSpawner => firstSpawner;
     public Transform SecondSpawner => secondSpawner;
     public Transform OneDiceSpawner => oneDiceSpawner;
     public float DiceCheckInterval => diceCheckInterval;
     public GameObject DicePrefab => dicePrefab;
+    public bool IsDebuggingEnabled => IsDebugging;
+    public int DebugFixedSteps => debugFixedSteps;
     
     /// <summary>
     /// Checks if both dice have the same value (only valid in two dice mode)
