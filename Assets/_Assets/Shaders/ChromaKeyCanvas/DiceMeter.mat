@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: DiceMeter
-  m_Shader: {fileID: -6465566751694194690, guid: 736e72250f74fbd40a62f6c071ae8699, type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: 05a722c3aff2ed04c83f35a159bd7b7d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -43,7 +43,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: ddad247687620ef4496214d59c9a27f2, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Texture2DAsset_11f2b0447fb84b1ab05df55385300fb1_Out_0_Texture2D:
@@ -72,7 +72,9 @@ Material:
     - _Cull: 2
     - _DstBlend: 10
     - _Fuzziness: 0
+    - _Fuzziness2: 0
     - _HueRange: 0.4
+    - _HueRange2: 0.2
     - _QueueControl: 0
     - _QueueOffset: 0
     - _SrcBlend: 5
@@ -88,7 +90,8 @@ Material:
     - _ZWrite: 0
     - _ZWriteControl: 0
     m_Colors:
-    - _ChromaKeyColor: {r: 0, g: 0.5921569, b: 0.078431375, a: 1}
+    - _ChromaKeyColor: {r: 0, g: 0.59607846, b: 0.08627451, a: 1}
+    - _ChromaKeyColor2: {r: 0.47058827, g: 0.6039216, b: 0.29803923, a: 1}
     - _ClipRect: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

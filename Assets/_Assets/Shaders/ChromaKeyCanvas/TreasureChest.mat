@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: TreasureChest
-  m_Shader: {fileID: -6465566751694194690, guid: 736e72250f74fbd40a62f6c071ae8699, type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: cd71bebe103fba44da5144eee08465f4, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -43,7 +43,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: ddad247687620ef4496214d59c9a27f2, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Texture2DAsset_11f2b0447fb84b1ab05df55385300fb1_Out_0_Texture2D:
