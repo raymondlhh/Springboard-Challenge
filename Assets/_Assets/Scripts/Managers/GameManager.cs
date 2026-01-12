@@ -329,7 +329,7 @@ public class GameManager : MonoBehaviour
         
         // Wait for the 2-second timer to complete before allowing roll (same as human players)
         yield return new WaitForSeconds(2f);
-        HideDiceMeterAndRoll();
+        yield return StartCoroutine(HideDiceMeterAndRoll_Coroutine());
     }
     
     /// <summary>
@@ -380,6 +380,14 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void HideDiceMeterAndRoll()
     {
+        StartCoroutine(HideDiceMeterAndRoll_Coroutine());
+    }
+    
+    /// <summary>
+    /// Coroutine version that ensures DiceMeter is fully stopped before starting dice roll
+    /// </summary>
+    private IEnumerator HideDiceMeterAndRoll_Coroutine()
+    {
         if (diceManager != null)
         {
             // Stop the DiceMeter video
@@ -395,11 +403,44 @@ public class GameManager : MonoBehaviour
                 diceMeterTimerCoroutine = null;
             }
             
+            // Wait for the DiceMeter video to fully stop before starting dice roll
+            // This ensures smooth transition from DiceMeter to dice video
+            VideoPlayer videoPlayer = diceManager.VideoPlayer;
+            if (videoPlayer != null)
+            {
+                if (videoPlayer.isPlaying)
+                {
+                    float stopTimeout = 1.5f; // Increased timeout for more reliable stopping
+                    float stopElapsed = 0f;
+                    while (videoPlayer.isPlaying && stopElapsed < stopTimeout)
+                    {
+                        stopElapsed += Time.deltaTime;
+                        yield return null;
+                    }
+                    
+                    if (!videoPlayer.isPlaying)
+                    {
+                        Debug.Log("[GameManager] DiceMeter video fully stopped, starting dice roll");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[GameManager] DiceMeter video did not stop within timeout, forcing stop");
+                        // Force stop if still playing
+                        videoPlayer.Stop();
+                        videoPlayer.url = "";
+                    }
+                }
+                
+                // Additional wait to ensure VideoPlayer state is fully reset before starting dice video
+                yield return new WaitForSeconds(0.2f);
+                Debug.Log("[GameManager] VideoPlayer reset complete, ready for dice video");
+            }
+            
             Debug.Log("[GameManager] DiceMeter deactivated, starting roll (Second Method)");
         }
         
-        // Start the video-based dice roll
-        StartCoroutine(RollDice_SecondMethod());
+        // Start the video-based dice roll (this will show the actual dice result video)
+        yield return StartCoroutine(RollDice_SecondMethod());
     }
     
     /// <summary>
@@ -456,12 +497,16 @@ public class GameManager : MonoBehaviour
         }
         
         // Show the appropriate video (now a coroutine that waits for VideoPlayer to be prepared)
+        // This works for BOTH human and AI players - same video clips are used
+        bool isAITurn = playerManager != null && playerManager.IsAIPlayerTurn();
+        if (isAITurn)
+        {
+            Debug.Log($"[GameManager] AI Player rolling dice - will show video: First={firstDiceValue}, Second={secondDiceValue}");
+        }
         yield return StartCoroutine(ShowDiceVideo(useOneDice, firstDiceValue, secondDiceValue));
         
-        // Wait for the video to play (shorter wait for AI players to speed up gameplay)
-        bool isAITurn = playerManager != null && playerManager.IsAIPlayerTurn();
-        float videoWaitTime = isAITurn ? 1.5f : 5f; // Shorter wait for AI players
-        yield return new WaitForSeconds(videoWaitTime);
+        // Wait for the video to play (same duration for both AI and human players)
+        yield return new WaitForSeconds(5f);
         
         // Hide the video
         HideDiceVideo();
@@ -474,12 +519,17 @@ public class GameManager : MonoBehaviour
     
     /// <summary>
     /// Shows the appropriate dice video based on the roll (Second Method)
+    /// This method is used by BOTH human and AI players - same video clips for all players
     /// </summary>
     private IEnumerator ShowDiceVideo(bool useOneDice, int firstValue, int secondValue)
     {
+        bool isAITurn = playerManager != null && playerManager.IsAIPlayerTurn();
+        string playerType = isAITurn ? "AI Player" : "Human Player";
+        Debug.Log($"[GameManager] ShowDiceVideo called for {playerType}: useOneDice={useOneDice}, firstValue={firstValue}, secondValue={secondValue}");
+        
         if (diceManager == null)
         {
-            Debug.LogWarning("DiceManager is null! Cannot show dice video.");
+            Debug.LogWarning($"DiceManager is null! Cannot show dice video for {playerType}.");
             yield break;
         }
         
@@ -491,9 +541,34 @@ public class GameManager : MonoBehaviour
         }
         
         // First, stop any currently playing video but keep GameObject active for smooth transition
-        if (videoPlayer != null && videoPlayer.isPlaying)
+        // This is especially important when transitioning from DiceMeter to dice video
+        if (videoPlayer != null)
         {
-            videoPlayer.Stop();
+            if (videoPlayer.isPlaying)
+            {
+                videoPlayer.Stop();
+                // Clear the URL to ensure clean transition
+                videoPlayer.url = "";
+                
+                // Wait a moment for the video to fully stop before preparing the next one
+                float stopTimeout = 1f; // Increased timeout for more reliable stopping
+                float stopElapsed = 0f;
+                while (videoPlayer.isPlaying && stopElapsed < stopTimeout)
+                {
+                    stopElapsed += Time.deltaTime;
+                    yield return null;
+                }
+                
+                // Additional wait to ensure VideoPlayer state is fully reset
+                yield return new WaitForSeconds(0.1f);
+                
+                Debug.Log($"[GameManager] Previous video stopped, ready to play dice video for {playerType}");
+            }
+            else
+            {
+                // Even if not playing, clear URL to ensure clean state
+                videoPlayer.url = "";
+            }
         }
         
         string targetUrl = null;
@@ -609,9 +684,8 @@ public class GameManager : MonoBehaviour
             videoPlayer.Prepare();
             
             // Wait for VideoPlayer to be prepared (this ensures it's ready to play)
-            // For AI players, use shorter timeout to speed up gameplay
-            bool isAITurn = playerManager != null && playerManager.IsAIPlayerTurn();
-            float timeout = isAITurn ? 1.5f : 5f; // Shorter timeout for AI players
+            // Increased timeout to account for video transitions (especially from DiceMeter)
+            float timeout = 8f; // Maximum wait time (increased from 5f for better reliability)
             float elapsed = 0f;
             while (!videoPlayer.isPrepared && elapsed < timeout)
             {
@@ -630,6 +704,24 @@ public class GameManager : MonoBehaviour
                 Debug.LogWarning($"[GameManager] VideoPlayer failed to prepare within timeout. URL: {fullUrl}");
                 // Try to play anyway - sometimes it works even if not fully prepared
                 videoPlayer.Play();
+            }
+            
+            // Wait for the video to actually start playing (important for AI players)
+            float playTimeout = 3f; // Maximum wait time for video to start playing
+            float playElapsed = 0f;
+            while (!videoPlayer.isPlaying && playElapsed < playTimeout)
+            {
+                playElapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            if (videoPlayer.isPlaying)
+            {
+                Debug.Log($"[GameManager] Dice video is now playing for {playerType}: {clipDescription} from URL: {fullUrl}");
+            }
+            else
+            {
+                Debug.LogWarning($"[GameManager] Dice video failed to start playing within timeout for {playerType}: {clipDescription}");
             }
             
             Debug.Log($"[GameManager] Showing dice video: {clipDescription} from URL: {fullUrl}");

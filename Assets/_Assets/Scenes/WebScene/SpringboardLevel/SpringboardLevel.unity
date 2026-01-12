@@ -8486,7 +8486,7 @@ MonoBehaviour:
   - 6600
   - 6600
   - 6600
-  playerIsAI: 00000000
+  playerIsAI: 00010001
   playerPurchaseProbability:
   - 1
   - 1

@@ -21,13 +21,17 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private int debugFixedSteps = 1; // Fixed number of steps to move when IsDebugging is true
     
     [Header("Video Player References (Second Method)")]
+    [Tooltip("Single VideoPlayer component shared by both dice and DiceMeter videos. Used by BOTH human and AI players.")]
     [SerializeField] private VideoPlayer videoPlayer; // Single VideoPlayer component shared by both dice and DiceMeter videos
     [SerializeField] private RawImage rawImage; // RawImage component shared by both dice and DiceMeter (materials are switched dynamically)
     [SerializeField] private Material diceMaterial; // Material to use when displaying dice videos
     [SerializeField] private Material diceMeterMaterial; // Material to use when displaying DiceMeter video
     [SerializeField] private string diceMeterVideoUrl; // URL path to DiceMeter video (e.g., "StreamingAssets/Videos/Dice/DiceMeter.m4v")
+    [Tooltip("Video URLs for double dice rolls. Used by BOTH human and AI players - same videos for all players.")]
     [SerializeField] private string[] doubleVideoUrls; // Array of URL paths for double rolls: double_no2_1+1, double_no4_2+2, etc.
+    [Tooltip("Video URLs for single dice rolls. Used by BOTH human and AI players - same videos for all players.")]
     [SerializeField] private string[] singleVideoUrls; // Array of URL paths for single dice: single_no1 to single_no6
+    [Tooltip("Video URLs for non-double two dice rolls. Used by BOTH human and AI players - same videos for all players.")]
     [SerializeField] private string[] nonDoubleVideoUrls; // Array of URL paths for non-double two dice: no3_1+2, no4_1+3, etc.
     [Header("Video URL Settings")]
     [Tooltip("Base path for video URLs. If empty, will use Application.streamingAssetsPath")]
@@ -338,10 +342,15 @@ public class DiceManager : MonoBehaviour
             Debug.Log("[DiceManager] Switched RawImage to DiceMeter material.");
         }
         
-        // Get full URL path and play the video
+        // Get full URL path and set it
         string fullUrl = GetVideoUrl(diceMeterVideoUrl);
         videoPlayer.url = fullUrl;
         videoPlayer.isLooping = true; // Typically meter videos loop
+        
+        // Prepare the video before playing to ensure it's ready
+        videoPlayer.Prepare();
+        
+        // Play the video (it will start when prepared)
         videoPlayer.Play();
         
         Debug.Log($"[DiceManager] Playing DiceMeter video from URL: {fullUrl}");
@@ -370,14 +379,20 @@ public class DiceManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Stops the DiceMeter video
+    /// Stops the DiceMeter video and fully resets the VideoPlayer to ensure clean transition
     /// </summary>
     public void StopDiceMeterVideo()
     {
         if (videoPlayer != null)
         {
+            // Stop the video
             videoPlayer.Stop();
-            Debug.Log("[DiceManager] Stopped DiceMeter video.");
+            
+            // Clear the URL to ensure the VideoPlayer is fully reset
+            // This prevents the VideoPlayer from trying to play the DiceMeter when we switch to dice video
+            videoPlayer.url = "";
+            
+            Debug.Log("[DiceManager] Stopped DiceMeter video and cleared URL.");
         }
     }
 }
