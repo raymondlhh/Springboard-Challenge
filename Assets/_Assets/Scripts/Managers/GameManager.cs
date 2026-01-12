@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Video;
 using System.Collections;
 
 public class GameManager : MonoBehaviour
@@ -309,11 +310,13 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void ShowDiceMeter()
     {
-        if (diceManager != null && diceManager.DiceMeter != null)
+        if (diceManager != null)
         {
-            diceManager.DiceMeter.SetActive(true);
             isDiceMeterActive = true;
             canInteractWithDiceMeter = false; // Reset interaction flag
+            
+            // Play the DiceMeter video (this will switch to DiceMeter material)
+            diceManager.PlayDiceMeterVideo();
             
             // Stop any existing timer coroutine
             if (diceMeterTimerCoroutine != null)
@@ -343,9 +346,11 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void HideDiceMeterAndRoll()
     {
-        if (diceManager != null && diceManager.DiceMeter != null)
+        if (diceManager != null)
         {
-            diceManager.DiceMeter.SetActive(false);
+            // Stop the DiceMeter video
+            diceManager.StopDiceMeterVideo();
+            
             isDiceMeterActive = false;
             canInteractWithDiceMeter = false; // Reset interaction flag
             
@@ -442,23 +447,34 @@ public class GameManager : MonoBehaviour
             return;
         }
         
-        // First, hide all videos
+        VideoPlayer videoPlayer = diceManager.VideoPlayer;
+        if (videoPlayer == null)
+        {
+            Debug.LogWarning("VideoPlayer is null! Cannot show dice video.");
+            return;
+        }
+        
+        // First, stop and hide the video player
         HideDiceVideo();
+        
+        VideoClip targetClip = null;
+        string clipDescription = "";
         
         if (useOneDice)
         {
             // Single dice mode: show single_no1 to single_no6
-            if (diceManager.SingleVideoPlayers != null && firstValue >= 1 && firstValue <= 6)
+            if (diceManager.SingleVideoClips != null && firstValue >= 1 && firstValue <= 6)
             {
                 int index = firstValue - 1; // Convert 1-6 to 0-5
-                if (index < diceManager.SingleVideoPlayers.Length && diceManager.SingleVideoPlayers[index] != null)
+                if (index < diceManager.SingleVideoClips.Length && diceManager.SingleVideoClips[index] != null)
                 {
-                    diceManager.SingleVideoPlayers[index].SetActive(true);
-                    Debug.Log($"[GameManager] Showing single dice video: single_no{firstValue}");
+                    targetClip = diceManager.SingleVideoClips[index];
+                    clipDescription = $"single_no{firstValue}";
                 }
                 else
                 {
-                    Debug.LogWarning($"Single video player at index {index} is null or out of range!");
+                    Debug.LogWarning($"Single video clip at index {index} is null or out of range!");
+                    return;
                 }
             }
         }
@@ -466,119 +482,115 @@ public class GameManager : MonoBehaviour
         {
             // Two dice mode
             bool isDouble = firstValue == secondValue;
+            int sum = firstValue + secondValue;
             
             if (isDouble)
             {
                 // Double roll: show double_no2_1+1, double_no4_2+2, etc.
                 // Mapping: 1+1=2, 2+2=4, 3+3=6, 4+4=8, 5+5=10, 6+6=12
-                int sum = firstValue + secondValue;
-                GameObject[] doubleVideos = diceManager.DoubleVideoPlayers;
-                
-                if (doubleVideos != null)
+                // Index mapping: (sum/2) - 1 = (firstValue) - 1
+                if (diceManager.DoubleVideoClips != null && firstValue >= 1 && firstValue <= 6)
                 {
-                    bool found = false;
-                    
-                    // First, try to find exact match (sum and values)
-                    for (int i = 0; i < doubleVideos.Length; i++)
+                    int index = firstValue - 1; // Convert 1-6 to 0-5
+                    if (index < diceManager.DoubleVideoClips.Length && diceManager.DoubleVideoClips[index] != null)
                     {
-                        if (doubleVideos[i] != null)
-                        {
-                            string videoName = doubleVideos[i].name.ToLower();
-                            // Check if video name contains the sum and values
-                            if ((videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_")) &&
-                                (videoName.Contains($"{firstValue}+{secondValue}") || videoName.Contains($"{secondValue}+{firstValue}")))
-                            {
-                                doubleVideos[i].SetActive(true);
-                                Debug.Log($"[GameManager] Showing double dice video: {doubleVideos[i].name}");
-                                found = true;
-                                break;
-                            }
-                        }
+                        targetClip = diceManager.DoubleVideoClips[index];
+                        clipDescription = $"double_no{sum}_{firstValue}+{secondValue}";
                     }
-                    
-                    // If exact match not found, fall back to sum-based matching
-                    if (!found)
+                    else
                     {
-                        for (int i = 0; i < doubleVideos.Length; i++)
+                        // Fallback: try to find by matching clip name
+                        targetClip = FindVideoClipByName(diceManager.DoubleVideoClips, sum, firstValue, secondValue, true);
+                        if (targetClip != null)
                         {
-                            if (doubleVideos[i] != null)
-                            {
-                                string videoName = doubleVideos[i].name.ToLower();
-                                // Match by sum only (e.g., no7_3+4 can match no7_5+2)
-                                if (videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_"))
-                                {
-                                    doubleVideos[i].SetActive(true);
-                                    Debug.Log($"[GameManager] Showing double dice video (sum fallback): {doubleVideos[i].name} for {firstValue}+{secondValue} (sum={sum})");
-                                    found = true;
-                                    break;
-                                }
-                            }
+                            clipDescription = $"double_no{sum}_{firstValue}+{secondValue} (found by name)";
                         }
-                    }
-                    
-                    if (!found)
-                    {
-                        Debug.LogWarning($"Could not find matching double video for {firstValue}+{secondValue} (sum={sum})");
                     }
                 }
             }
             else
             {
                 // Non-double roll: show no3_1+2, no4_1+3, etc.
-                // Need to find the correct video based on sum and individual values
-                int sum = firstValue + secondValue;
-                GameObject[] nonDoubleVideos = diceManager.NonDoubleVideoPlayers;
-                
-                if (nonDoubleVideos != null)
+                // Videos: no3_1+2, no4_1+3, no5_2+3, no6_2+4, no7_3+4, no8_3+5, no9_4+5, no10_4+6, no11_5+6
+                if (diceManager.NonDoubleVideoClips != null)
                 {
-                    // First, try to find exact match (sum and values)
-                    // Videos: no3_1+2, no4_1+3, no5_2+3, no6_2+4, no7_3+4, no8_3+5, no9_4+5, no10_4+6, no11_5+6
-                    bool found = false;
-                    for (int i = 0; i < nonDoubleVideos.Length; i++)
+                    // Try to find exact match by clip name first
+                    targetClip = FindVideoClipByName(diceManager.NonDoubleVideoClips, sum, firstValue, secondValue, false);
+                    if (targetClip != null)
                     {
-                        if (nonDoubleVideos[i] != null)
-                        {
-                            string videoName = nonDoubleVideos[i].name.ToLower();
-                            // Check if video name contains the sum and values
-                            if ((videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_")) &&
-                                (videoName.Contains($"{firstValue}+{secondValue}") || videoName.Contains($"{secondValue}+{firstValue}")))
-                            {
-                                nonDoubleVideos[i].SetActive(true);
-                                Debug.Log($"[GameManager] Showing non-double dice video: {nonDoubleVideos[i].name}");
-                                found = true;
-                                break;
-                            }
-                        }
+                        clipDescription = $"no{sum}_{firstValue}+{secondValue} (found by name)";
                     }
-                    
-                    // If exact match not found, fall back to sum-based matching
-                    // (e.g., no7_3+4 can match no7_5+2 since both sum to 7)
-                    if (!found)
+                    else
                     {
-                        for (int i = 0; i < nonDoubleVideos.Length; i++)
+                        // Fallback: match by sum only (find first clip with matching sum)
+                        for (int i = 0; i < diceManager.NonDoubleVideoClips.Length; i++)
                         {
-                            if (nonDoubleVideos[i] != null)
+                            if (diceManager.NonDoubleVideoClips[i] != null)
                             {
-                                string videoName = nonDoubleVideos[i].name.ToLower();
-                                // Match by sum only (e.g., no7_3+4 can match no7_5+2)
-                                if (videoName.Contains($"no{sum}") || videoName.Contains($"_{sum}_"))
+                                string clipName = diceManager.NonDoubleVideoClips[i].name.ToLower();
+                                if (clipName.Contains($"no{sum}") || clipName.Contains($"_{sum}_"))
                                 {
-                                    nonDoubleVideos[i].SetActive(true);
-                                    Debug.Log($"[GameManager] Showing non-double dice video (sum fallback): {nonDoubleVideos[i].name} for {firstValue}+{secondValue} (sum={sum})");
-                                    found = true;
+                                    targetClip = diceManager.NonDoubleVideoClips[i];
+                                    clipDescription = $"no{sum}_{firstValue}+{secondValue} (sum fallback)";
                                     break;
                                 }
                             }
                         }
                     }
-                    
-                    if (!found)
-                    {
-                        Debug.LogWarning($"Could not find matching non-double video for {firstValue}+{secondValue} (sum={sum})");
-                    }
                 }
             }
         }
+        
+        // Play the video clip if found
+        if (targetClip != null)
+        {
+            // Switch to Dice material before playing dice video
+            diceManager.SwitchToDiceMaterial();
+            
+            // Activate the video player GameObject
+            if (videoPlayer.gameObject != null)
+            {
+                videoPlayer.gameObject.SetActive(true);
+            }
+            
+            // Set and play the clip
+            videoPlayer.clip = targetClip;
+            videoPlayer.Play();
+            Debug.Log($"[GameManager] Showing dice video: {clipDescription}");
+        }
+        else
+        {
+            Debug.LogWarning($"Could not find matching video clip for {firstValue}+{secondValue}");
+        }
+    }
+    
+    /// <summary>
+    /// Helper method to find a video clip by matching its name with dice values
+    /// </summary>
+    private VideoClip FindVideoClipByName(VideoClip[] clips, int sum, int firstValue, int secondValue, bool isDouble)
+    {
+        if (clips == null) return null;
+        
+        string searchPattern1 = $"{firstValue}+{secondValue}";
+        string searchPattern2 = $"{secondValue}+{firstValue}";
+        string sumPattern = $"no{sum}";
+        
+        foreach (VideoClip clip in clips)
+        {
+            if (clip != null)
+            {
+                string clipName = clip.name.ToLower();
+                bool matchesSum = clipName.Contains(sumPattern) || clipName.Contains($"_{sum}_");
+                bool matchesValues = clipName.Contains(searchPattern1) || clipName.Contains(searchPattern2);
+                
+                if (matchesSum && matchesValues)
+                {
+                    return clip;
+                }
+            }
+        }
+        
+        return null;
     }
     
     /// <summary>
@@ -591,39 +603,17 @@ public class GameManager : MonoBehaviour
             return;
         }
         
-        // Hide all double videos
-        if (diceManager.DoubleVideoPlayers != null)
+        VideoPlayer videoPlayer = diceManager.VideoPlayer;
+        if (videoPlayer != null)
         {
-            foreach (GameObject video in diceManager.DoubleVideoPlayers)
+            // Stop the video
+            videoPlayer.Stop();
+            
+            // Hide the video player GameObject (for cards, player movement, etc.)
+            // Note: Will be reactivated when DiceMeter or dice videos need to play
+            if (videoPlayer.gameObject != null)
             {
-                if (video != null)
-                {
-                    video.SetActive(false);
-                }
-            }
-        }
-        
-        // Hide all single videos
-        if (diceManager.SingleVideoPlayers != null)
-        {
-            foreach (GameObject video in diceManager.SingleVideoPlayers)
-            {
-                if (video != null)
-                {
-                    video.SetActive(false);
-                }
-            }
-        }
-        
-        // Hide all non-double videos
-        if (diceManager.NonDoubleVideoPlayers != null)
-        {
-            foreach (GameObject video in diceManager.NonDoubleVideoPlayers)
-            {
-                if (video != null)
-                {
-                    video.SetActive(false);
-                }
+                videoPlayer.gameObject.SetActive(false);
             }
         }
     }
@@ -779,10 +769,6 @@ public class GameManager : MonoBehaviour
                 diceMeterTimerCoroutine = null;
             }
             
-            if (diceManager.DiceMeter != null)
-            {
-                diceManager.DiceMeter.SetActive(false);
-            }
             return;
         }
         
